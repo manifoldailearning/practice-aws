@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: support-ops-agent
+  namespace: support-ops-agent
+  labels:
+    app.kubernetes.io/name: support-ops-agent
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: support-ops-agent
+  ports:
+    - name: http
+      port: 80
+      targetPort: http

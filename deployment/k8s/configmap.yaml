@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: support-ops-agent-config
+  namespace: support-ops-agent
+  labels:
+    app.kubernetes.io/name: support-ops-agent
+data:
+  APP_NAME: "support-ops-agent"
+  ENVIRONMENT: "production"
+  LOG_LEVEL: "INFO"
+  OPENAI_MODEL: "gpt-4.1-nano"
+  AWS_REGION: "us-east-1"
+  AWS_SECRETS_MANAGER_SECRET_NAME: "support-ops-agent/openai"
+  CLOUDWATCH_LOG_GROUP: "/support-ops/agent"
+  CLOUDWATCH_LOG_STREAM_PREFIX: "agent"
+  ENABLE_CLOUDWATCH_LOGGING: "false"
+  SECRETS_SOURCE: "aws_secrets_manager"
+  REQUEST_TIMEOUT_SECONDS: "120"
