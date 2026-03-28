@@ -14,6 +14,6 @@ data:
   AWS_SECRETS_MANAGER_SECRET_NAME: "support-ops-agent/openai"
   CLOUDWATCH_LOG_GROUP: "/support-ops/agent"
   CLOUDWATCH_LOG_STREAM_PREFIX: "agent"
-  ENABLE_CLOUDWATCH_LOGGING: "false"
+  ENABLE_CLOUDWATCH_LOGGING: "true"
   SECRETS_SOURCE: "aws_secrets_manager"
   REQUEST_TIMEOUT_SECONDS: "120"
