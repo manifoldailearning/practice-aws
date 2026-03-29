@@ -11,7 +11,7 @@ Use these three pieces together; each file avoids duplicating the others.
 | Doc | Use it for |
 |-----|------------|
 | **`docs/CI_CD_AWS_FROM_SCRATCH.md`** | AWS account → ECR → EKS → IRSA → Secrets Manager → CloudWatch → GitHub Actions → **`kubectl`** and **§15** demo curls. Starts with **§1.1 Class demo runbook** (step-by-step order). |
-| **`docs/CLASS_DEMO_GOLDEN_OBSERVABILITY.md`** | Golden dataset, **`./scripts/run_golden_regression.sh`**, structured errors, **CloudWatch Logs Insights** queries, **`curl /metrics`** (Prometheus is metrics only — not logs). |
+| **`docs/CLASS_DEMO_GOLDEN_OBSERVABILITY.md`** | Golden dataset, **`./scripts/run_golden_regression.sh`**, structured errors, **CloudWatch Logs Insights** queries, **`curl /metrics`** (Prometheus is metrics only — not logs). **§6** = optional **demo tool failure** / **slow policy** scenarios. |
 
 **Suggested flow (45–60 min):**
 
@@ -127,6 +127,7 @@ Key settings (see `app/core/config.py`):
 | `ENABLE_CLOUDWATCH_LOGGING` | Toggle watchtower handler |
 | `ENABLE_LANGCHAIN_TRACE_LOGS` | LangChain span-style JSON logs (more volume; good for CloudWatch Logs Insights demos) |
 | `AGENT_IO_LOG_MAX_CHARS` | Max length for logged user query / LLM / draft text per field (`0` disables; default `4000`) |
+| `ENABLE_DEMO_SCENARIOS` | If `true`, `user_query` may include `[demo:tool-failure]` or `[demo:slow-tool]` for policy-node demos (see `docs/CLASS_DEMO_GOLDEN_OBSERVABILITY.md` §6) |
 | `REDIS_URL` | Optional future cache |
 | `REQUEST_TIMEOUT_SECONDS` | Agent / upstream timeout |
 | `SECRETS_SOURCE` | `env`, `aws_secrets_manager`, or `auto` |

@@ -82,6 +82,8 @@ async def config_check(request: Request) -> ConfigCheckResponse:
         cloudwatch_enabled=settings.enable_cloudwatch_logging,
         aws_region=settings.aws_region,
         secret_provider_type=prov.provider_type,
+        demo_scenarios_enabled=settings.enable_demo_scenarios,
+        demo_slow_tool_delay_seconds=settings.demo_slow_tool_delay_seconds,
     )
 
 

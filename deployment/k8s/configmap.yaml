@@ -18,3 +18,6 @@ data:
   ENABLE_LANGCHAIN_TRACE_LOGS: "false"
   SECRETS_SOURCE: "aws_secrets_manager"
   REQUEST_TIMEOUT_SECONDS: "120"
+  # Classroom only: simulated policy failure / delay — keep false in production
+  ENABLE_DEMO_SCENARIOS: "false"
+  DEMO_SLOW_TOOL_DELAY_SECONDS: "12"

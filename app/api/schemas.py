@@ -45,6 +45,8 @@ class ConfigCheckResponse(BaseModel):
     cloudwatch_enabled: bool
     aws_region: str
     secret_provider_type: str
+    demo_scenarios_enabled: bool = False
+    demo_slow_tool_delay_seconds: float = 0.0
 
 
 class MetricsSummaryResponse(BaseModel):

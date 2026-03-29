@@ -249,16 +249,105 @@ curl -s http://localhost:8000/metrics | head -40
 
 ---
 
-## 6. Suggested 20-minute class flow
+## 6. Demo use cases: simulated tool failure and slow policy tool (class)
+
+These behaviors run only in the **`policy_lookup`** node, **before** `search_bootcamp_policy_tool` is called. They are **off** unless **`ENABLE_DEMO_SCENARIOS=true`**. Use them to show **errors** and **long-running steps** in CloudWatch Logs and in **`node_finish`** duration for `policy_lookup`.
+
+**Safety:** Keep **`ENABLE_DEMO_SCENARIOS=false`** in real production. Triggers are literal substrings inside `user_query` (case-insensitive).
+
+### 6.1 Enable demo mode
+
+**Local (`.env`):**
+
+```bash
+ENABLE_DEMO_SCENARIOS=true
+# Optional overrides (defaults are fine for class):
+# DEMO_TOOL_FAILURE_SUBSTRING=[demo:tool-failure]
+# DEMO_SLOW_TOOL_SUBSTRING=[demo:slow-tool]
+# DEMO_SLOW_TOOL_DELAY_SECONDS=12
+```
+
+**EKS:** Add the same keys to `deployment/k8s/configmap.yaml` (as strings), apply, and restart the deployment.
+
+**Verify:** `curl -s http://localhost:8000/config/check | jq .demo_scenarios_enabled` should be `true`.
+
+### 6.2 Use case A — Simulated tool failure (CloudWatch: ERROR + stack trace)
+
+**Intent:** The graph fails at policy lookup after a structured log line so you can filter in Logs Insights on **`demo_tool_failure`**, **`AGENT_INVOCATION_FAILED`**, and **`request_id`**.
+
+1. Set **`ENABLE_DEMO_SCENARIOS=true`** (§6.1).
+2. Send a query that contains the failure token (default **`[demo:tool-failure]`**) anywhere in the text:
+
+```bash
+curl -s http://localhost:8000/agent/respond \
+  -H 'Content-Type: application/json' \
+  -H 'X-Request-ID: demo-fail-001' \
+  -d '{"user_query":"Defer question [demo:tool-failure] for class"}'
+```
+
+3. Expect **HTTP 500** and JSON error body with `code` **`agent_error`**.
+4. In **CloudWatch Logs Insights**, search:
+
+```sql
+fields @timestamp, @message
+| filter @message like /demo-fail-001/
+| sort @timestamp asc
+```
+
+5. **What to point out in class:** a line with **`"log_event":"demo_tool_failure"`** (before the exception), then **`Agent invocation failed`** / **`INTERNAL_ERROR`** with a **traceback**; correlate with **`llm_response`** lines that appeared **before** policy lookup (classify + enrich still ran).
+
+**If both `[demo:tool-failure]` and `[demo:slow-tool]` appear**, **failure wins** (no sleep).
+
+### 6.3 Use case B — Slow policy step (CloudWatch: duration + demo events)
+
+**Intent:** Artificial **delay** before the policy search so **`node_finish`** for **`policy_lookup`** shows a large **`duration_ms`** (~delay + tool time), and logs include **`demo_slow_tool_start`** / **`demo_slow_tool_end`**.
+
+1. Set **`ENABLE_DEMO_SCENARIOS=true`** and optionally **`DEMO_SLOW_TOOL_DELAY_SECONDS=15`** (must stay **≤ 120**).
+2. Use the slow token (default **`[demo:slow-tool]`**) **without** the failure token:
+
+```bash
+curl -s http://localhost:8000/agent/respond \
+  -H 'Content-Type: application/json' \
+  -H 'X-Request-ID: demo-slow-001' \
+  -d '{"user_query":"Need cohort info [demo:slow-tool] thanks"}'
+```
+
+3. The request **succeeds** (HTTP 200) after ~**delay + LLM + tool** time.
+4. In Insights, filter by **`demo-slow-001`** and look for:
+   - **`"log_event":"demo_slow_tool_start"`** / **`demo_slow_tool_end`**
+   - **`"message":"node_finish"`** with **`"node_name":"policy_lookup"`** and **`duration_ms`** in the **thousands** (milliseconds).
+
+**Narrow to node timing:**
+
+```sql
+fields @timestamp, @message
+| filter @message like /demo-slow-001/
+| filter @message like /node_finish/ and @message like /policy_lookup/
+| sort @timestamp asc
+```
+
+5. **What to say:** This mimics investigating **slow external tools** or **downstream APIs**; in production you would also use **metrics** (`/metrics`) and **LangSmith** / traces, not only logs.
+
+### 6.4 Suggested 10-minute add-on flow (after §4)
+
+1. Turn on **`ENABLE_DEMO_SCENARIOS`** → show **`/config/check`**.
+2. Run **failure** curl → **500** → Insights query → **`demo_tool_failure`** + exception.
+3. Run **slow** curl → **200** → Insights → **`demo_slow_tool_*`** + **`node_finish`** **`duration_ms`** on **`policy_lookup`**.
+4. Turn **`ENABLE_DEMO_SCENARIOS`** off again before the next deploy to prod.
+
+---
+
+## 7. Suggested 20-minute class flow
 
 1. **Golden dataset + regression** (7 min): Show `data/golden_dataset.json` → `GET /demo/golden-dataset` → run `pytest tests/golden/test_golden_regression.py -v` (optionally break one label and re-run to show failure).
 2. **Errors** (3 min): Trigger a validation error (`POST /agent/respond` with `{}`) and show `422` + structured log fields.
 3. **CloudWatch** (6 min): Enable logging flags, tail log group, run Insights query by `request_id`, optionally enable LangChain trace logs and run the trace query.
 4. **Prometheus** (4 min): `curl /metrics`, explain that **logs** are not here; Prometheus is for **red** and **SLO-style** dashboards.
+5. **Optional demo scenarios** (10 min): Follow **§6** (tool failure + slow policy).
 
 ---
 
-## 7. File map
+## 8. File map
 
 | File | Role |
 |------|------|
@@ -273,3 +362,5 @@ curl -s http://localhost:8000/metrics | head -40
 | `app/api/routes.py` | Agent error codes on timeout / failure |
 | `tests/golden/test_golden_regression.py` | Parametrized regression vs golden labels (stub graph) |
 | `scripts/run_golden_regression.sh` | One-liner to run the regression suite |
+| `app/core/demo_scenarios.py` | Resolves `[demo:tool-failure]` / `[demo:slow-tool]` when enabled |
+| `app/agents/nodes/policy_lookup.py` | Injects failure or sleep before `search_bootcamp_policy_tool` |
