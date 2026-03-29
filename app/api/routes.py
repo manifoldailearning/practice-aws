@@ -8,6 +8,7 @@ import logging
 from typing import Any, AsyncIterator
 
 from fastapi import APIRouter, HTTPException, Request
+from langchain_core.runnables import RunnableConfig
 from fastapi.responses import StreamingResponse
 
 from app.agents.state import AgentState
@@ -21,7 +22,9 @@ from app.api.schemas import (
 )
 from app.core.config import get_settings
 from app.core.exceptions import AgentInvocationError
+from app.core.langsmith_tracing import graph_run_config
 from app.core.metrics import REGISTRY, monotonic_ms
+from app.core.prometheus_metrics import AGENT_INVOCATIONS
 from app.core.readiness import ReadinessService
 from app.services.request_context import get_request_context
 
@@ -89,20 +92,45 @@ async def agent_respond(request: Request, body: AgentRespondRequest) -> AgentRes
     settings = get_settings()
     t0 = monotonic_ms()
     REGISTRY.record_agent_invocation()
+    AGENT_INVOCATIONS.labels(endpoint="/agent/respond").inc()
     initial: AgentState = {
         "user_query": body.user_query,
         "request_id": rid,
         "used_tools": [],
     }
+    run_cfg = graph_run_config(
+        request_id=rid,
+        environment=settings.environment,
+        endpoint="/agent/respond",
+    )
     try:
         final = await asyncio.wait_for(
-            graph.ainvoke(initial),
+            graph.ainvoke(initial, config=run_cfg),
             timeout=settings.request_timeout_seconds,
         )
     except asyncio.TimeoutError as exc:
+        logger.error(
+            "Agent execution timed out",
+            extra={
+                "request_id": rid,
+                "error_code": "AGENT_TIMEOUT",
+                "error_type": "TimeoutError",
+                "log_event": "agent_timeout",
+                "safe_metadata": {"endpoint": "/agent/respond", "request_id": rid},
+            },
+        )
         raise HTTPException(status_code=504, detail="Agent execution timed out") from exc
     except Exception as exc:  # noqa: BLE001
-        logger.exception("Agent invocation failed", extra={"request_id": rid})
+        logger.exception(
+            "Agent invocation failed",
+            extra={
+                "request_id": rid,
+                "error_code": "AGENT_INVOCATION_FAILED",
+                "error_type": type(exc).__name__,
+                "log_event": "agent_invocation_error",
+                "safe_metadata": {"endpoint": "/agent/respond", "request_id": rid},
+            },
+        )
         raise AgentInvocationError("Agent execution failed") from exc
 
     latency = monotonic_ms() - t0
@@ -119,11 +147,13 @@ async def agent_respond(request: Request, body: AgentRespondRequest) -> AgentRes
     )
 
 
-async def _sse_updates(graph: Any, initial: AgentState) -> AsyncIterator[bytes]:
+async def _sse_updates(
+    graph: Any, initial: AgentState, run_cfg: RunnableConfig
+) -> AsyncIterator[bytes]:
     """Stream LangGraph update chunks as SSE."""
     yield _sse_event("start", {"request_id": initial.get("request_id")})
     try:
-        async for chunk in graph.astream(initial, stream_mode="updates"):
+        async for chunk in graph.astream(initial, stream_mode="updates", config=run_cfg):
             yield _sse_event("update", chunk)
         yield _sse_event("done", {})
     except Exception as exc:  # noqa: BLE001
@@ -140,15 +170,22 @@ async def agent_stream(request: Request, body: AgentRespondRequest) -> Streaming
     """Server-Sent Events stream of graph updates (and optional token stream later)."""
     rid = _get_request_id(request)
     graph = request.app.state.graph
+    settings = get_settings()
     initial: AgentState = {
         "user_query": body.user_query,
         "request_id": rid,
         "used_tools": [],
     }
+    run_cfg = graph_run_config(
+        request_id=rid,
+        environment=settings.environment,
+        endpoint="/agent/stream",
+    )
 
     async def gen() -> AsyncIterator[bytes]:
         REGISTRY.record_agent_invocation()
-        async for part in _sse_updates(graph, initial):
+        AGENT_INVOCATIONS.labels(endpoint="/agent/stream").inc()
+        async for part in _sse_updates(graph, initial, run_cfg):
             yield part
 
     return StreamingResponse(

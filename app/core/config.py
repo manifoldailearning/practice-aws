@@ -38,6 +38,10 @@ class Settings(BaseSettings):
         default=False,
         description="If true, also emit logs to CloudWatch via watchtower",
     )
+    enable_langchain_trace_logs: bool = Field(
+        default=False,
+        description="If true, attach LangChain trace callback (structured logs → stdout / CloudWatch)",
+    )
     redis_url: str | None = Field(default=None, description="Optional Redis URL for future cache")
     request_timeout_seconds: float = Field(default=120.0, description="Upstream request timeout")
 

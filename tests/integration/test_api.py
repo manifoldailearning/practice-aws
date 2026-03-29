@@ -12,9 +12,11 @@ from app.main import app
 
 
 class _FakeGraph:
-    """Minimal async graph stub."""
+    """Minimal async graph stub (matches LangGraph ainvoke/astream signatures)."""
 
-    async def ainvoke(self, state: dict[str, Any]) -> dict[str, Any]:
+    async def ainvoke(
+        self, state: dict[str, Any], config: dict[str, Any] | None = None, **_: Any
+    ) -> dict[str, Any]:
         return {
             "classification": "deferment_request",
             "policy_context": "policy text",
@@ -24,7 +26,13 @@ class _FakeGraph:
             "used_tools": ["classify_issue_tool", "search_bootcamp_policy_tool"],
         }
 
-    async def astream(self, state: dict[str, Any], stream_mode: str | None = None):
+    async def astream(
+        self,
+        state: dict[str, Any],
+        stream_mode: str | None = None,
+        config: dict[str, Any] | None = None,
+        **_: Any,
+    ):
         yield {"classify": {"classification": "deferment_request"}}
 
 
@@ -61,3 +69,20 @@ def test_agent_respond_mocked(client: TestClient) -> None:
     assert data["classification"] == "deferment_request"
     assert "draft_reply" in data
     assert data["request_id"]
+
+
+def test_golden_dataset_endpoint(client: TestClient) -> None:
+    r = client.get("/demo/golden-dataset")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["version"]
+    assert len(body["cases"]) >= 1
+    assert body["cases"][0]["id"]
+
+
+def test_prometheus_metrics_endpoint(client: TestClient) -> None:
+    r = client.get("/metrics")
+    assert r.status_code == 200
+    text = r.text
+    assert "support_ops_http_requests_total" in text
+    assert "support_ops_http_request_duration_seconds" in text

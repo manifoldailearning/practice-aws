@@ -41,6 +41,12 @@ class JsonFormatter(logging.Formatter):
             payload["duration_ms"] = record.duration_ms
         if record.exc_info:
             payload["exception"] = "".join(traceback.format_exception_only(record.exc_info[1]))
+        if getattr(record, "error_code", None):
+            payload["error_code"] = record.error_code
+        if getattr(record, "error_type", None):
+            payload["error_type"] = record.error_type
+        if getattr(record, "log_event", None):
+            payload["log_event"] = record.log_event
         extra = getattr(record, "safe_metadata", None)
         if isinstance(extra, dict):
             payload["metadata"] = extra

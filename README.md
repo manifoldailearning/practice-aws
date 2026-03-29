@@ -4,6 +4,32 @@ Production-style internal **Support Operations Assistant** for an AI bootcamp / 
 
 This repository is intended as a **teachable but realistic** reference for how teams ship agentic services on **Amazon EKS** with **ECR**, **GitHub Actions**, and AWS observability primitives.
 
+## Class demo (teaching)
+
+Use these three pieces together; each file avoids duplicating the others.
+
+| Doc | Use it for |
+|-----|------------|
+| **`docs/CI_CD_AWS_FROM_SCRATCH.md`** | AWS account → ECR → EKS → IRSA → Secrets Manager → CloudWatch → GitHub Actions → **`kubectl`** and **§15** demo curls. Starts with **§1.1 Class demo runbook** (step-by-step order). |
+| **`docs/CLASS_DEMO_GOLDEN_OBSERVABILITY.md`** | Golden dataset, **`./scripts/run_golden_regression.sh`**, structured errors, **CloudWatch Logs Insights** queries, **`curl /metrics`** (Prometheus is metrics only — not logs). |
+
+**Suggested flow (45–60 min):**
+
+1. **Local:** install deps, run `pytest -q` and `./scripts/run_golden_regression.sh` — same tests CI runs.
+2. **Optional break:** walk through `data/golden_dataset.json` and `GET /demo/golden-dataset` (after `uvicorn` locally or in step 4).
+3. **AWS:** follow **`docs/CI_CD_AWS_FROM_SCRATCH.md`** §1.1 table — deploy or use existing cluster, then **port-forward** and run **§15** curls.
+4. **Observability:** open **CloudWatch Logs** and run **Logs Insights** queries from **`docs/CLASS_DEMO_GOLDEN_OBSERVABILITY.md`** — use `X-Request-ID` from your curl.
+
+**Quick local commands (no cluster):**
+
+```bash
+python3.11 -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt
+pytest -q
+./scripts/run_golden_regression.sh
+```
+
+**Quick API after deploy** (see CI/CD doc §15 for full list): `kubectl port-forward -n support-ops-agent svc/support-ops-agent 8000:80` then `curl http://localhost:8000/health`.
+
 ## Use case
 
 Program operations and support teams ask questions such as:
@@ -50,6 +76,9 @@ app/
 deployment/k8s/           # namespace, service account, configmap, deployment, service
 .github/workflows/        # CI: test, build/push ECR, kubectl apply, rollout
 tests/                    # unit + integration (mocked agent)
+scripts/                  # e.g. run_golden_regression.sh (class / CI)
+data/golden_dataset.json  # curated labels for regression demos
+docs/                     # CI_CD_AWS_FROM_SCRATCH.md, CLASS_DEMO_GOLDEN_OBSERVABILITY.md
 ```
 
 ## Local development
@@ -80,6 +109,8 @@ curl -s http://localhost:8000/agent/respond \
   -d '{"user_query":"A learner wants to defer to the next cohort because of timing. Draft a reply and classify."}'
 ```
 
+**Golden regression (class / CI):** deterministic tests assert each row in `data/golden_dataset.json` matches `POST /agent/respond` when the graph is a stub (see `tests/golden/test_golden_regression.py`). Run `./scripts/run_golden_regression.sh` or `pytest tests/golden/test_golden_regression.py -v`. Details: `docs/CLASS_DEMO_GOLDEN_OBSERVABILITY.md` §2.1. This is called out in **`docs/CI_CD_AWS_FROM_SCRATCH.md`** §1.1 step 2.
+
 ### Configuration (`pydantic-settings`)
 
 Key settings (see `app/core/config.py`):
@@ -94,6 +125,7 @@ Key settings (see `app/core/config.py`):
 | `AWS_SECRETS_MANAGER_SECRET_NAME` | Secret name/ARN for production JSON |
 | `CLOUDWATCH_LOG_GROUP` / `CLOUDWATCH_LOG_STREAM_PREFIX` | Direct CloudWatch logging |
 | `ENABLE_CLOUDWATCH_LOGGING` | Toggle watchtower handler |
+| `ENABLE_LANGCHAIN_TRACE_LOGS` | LangChain span-style JSON logs (more volume; good for CloudWatch Logs Insights demos) |
 | `REDIS_URL` | Optional future cache |
 | `REQUEST_TIMEOUT_SECONDS` | Agent / upstream timeout |
 | `SECRETS_SOURCE` | `env`, `aws_secrets_manager`, or `auto` |
@@ -164,10 +196,12 @@ Use **immutable tags** (git SHA), not only `latest`.
 
 Workflow: `.github/workflows/deploy.yml`
 
-1. Install dependencies and run `pytest`.
+1. Install dependencies and run **`pytest`** (includes unit, integration, and golden tests).
 2. `docker build` and push to ECR with tag `${{ github.sha }}`.
 3. `aws eks update-kubeconfig` and `kubectl apply` manifests.
 4. `kubectl rollout status` for the deployment.
+
+**Class tip:** show the **Actions** tab for the same commit students ran locally; the **test** job must pass before the image is built. Full AWS setup: `docs/CI_CD_AWS_FROM_SCRATCH.md` §1.1 and §14.
 
 **Repository secrets (examples):**
 
@@ -190,6 +224,8 @@ Workflow: `.github/workflows/deploy.yml`
 | GET | `/health` | Liveness |
 | GET | `/ready` | Readiness (config + secrets loadable; no secret values) |
 | GET | `/metrics-summary` | In-memory counters / latency / agent invocations |
+| GET | `/metrics` | Prometheus text metrics (scraped by Prometheus; not application logs) |
+| GET | `/demo/golden-dataset` | Teaching golden examples (JSON) |
 | GET | `/config/check` | Safe config metadata only |
 | POST | `/agent/respond` | Full graph run, JSON body |
 | POST | `/agent/stream` | SSE stream of LangGraph `updates` chunks |
@@ -207,7 +243,7 @@ Workflow: `.github/workflows/deploy.yml`
 ## Production notes and tradeoffs
 
 - **Structured JSON logs** include `request_id`, `route`, `environment`, optional `node_name`, `duration_ms`, and safe metadata — never secrets.
-- **Metrics** are in-process (demo); swap for Prometheus / ADOT in production.
+- **Metrics:** `GET /metrics` exposes Prometheus counters/histograms; `GET /metrics-summary` returns JSON. **Logs** go to **CloudWatch** (or stdout) — not to Prometheus. See `docs/CLASS_DEMO_GOLDEN_OBSERVABILITY.md` for a class walkthrough (golden dataset, errors, CloudWatch Insights, Prometheus).
 - **Graph** uses async nodes and `tenacity` around LLM calls for transient API failures.
 - **State** is TypedDict-based; extend with reducers if you add conversational memory.
 - **Ingress / TLS** omitted intentionally — add per your platform.

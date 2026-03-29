@@ -1,0 +1,36 @@
+{
+  "version": "1.0",
+  "description": "Curated regression-style examples for teaching: fixed inputs and expected high-level labels. Use for smoke tests and classroom walkthroughs (not a full offline eval harness).",
+  "cases": [
+    {
+      "id": "deferment-001",
+      "user_query": "A learner wants to defer to the next cohort because of timing issues with their current job.",
+      "expected_classification": "deferment_request",
+      "tags": ["deferment", "happy-path"]
+    },
+    {
+      "id": "access-001",
+      "user_query": "I cannot log into the learning portal; it says my account is locked after too many attempts.",
+      "expected_classification": "access_issue",
+      "tags": ["access", "login"]
+    },
+    {
+      "id": "payment-001",
+      "user_query": "My card was charged twice for the same cohort enrollment last week.",
+      "expected_classification": "payment_issue",
+      "tags": ["payment", "billing"]
+    },
+    {
+      "id": "technical-001",
+      "user_query": "The video player freezes on Safari during Week 4 lab; Chrome works.",
+      "expected_classification": "technical_issue",
+      "tags": ["technical", "browser"]
+    },
+    {
+      "id": "policy-001",
+      "user_query": "What is the refund policy if I withdraw before Week 3 starts?",
+      "expected_classification": "policy_question",
+      "tags": ["policy", "faq"]
+    }
+  ]
+}

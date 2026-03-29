@@ -16,3 +16,4 @@ tenacity==9.0.0
 pytest==8.3.4
 pytest-asyncio==0.25.0
 watchtower==3.3.1
+prometheus-client==0.21.1

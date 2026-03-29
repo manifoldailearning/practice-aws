@@ -55,3 +55,20 @@ class MetricsSummaryResponse(BaseModel):
     failure_count: int
     average_latency_ms: float
     agent_invocation_count: int
+
+
+class GoldenCaseItem(BaseModel):
+    """One row from the teaching golden dataset."""
+
+    id: str
+    user_query: str
+    expected_classification: str
+    tags: list[str] = Field(default_factory=list)
+
+
+class GoldenDatasetResponse(BaseModel):
+    """Versioned golden examples for regression demos (no secrets)."""
+
+    version: str
+    description: str
+    cases: list[GoldenCaseItem]

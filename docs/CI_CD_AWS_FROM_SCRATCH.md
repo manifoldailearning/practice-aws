@@ -20,6 +20,26 @@ Workflow file in this repo: `.github/workflows/deploy.yml`.
 
 ---
 
+## 1.1 Class demo runbook (what to show, in order)
+
+Use this order so the story flows: **tests → pipeline → cluster → API → logs → metrics**.
+
+| Step | Where | What you do | Why students care |
+|------|--------|-------------|-------------------|
+| 1 | Laptop | `python3.11 -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt` then `pytest -q` | Same tests **GitHub Actions** runs before building the image. |
+| 2 | Laptop | `./scripts/run_golden_regression.sh` | **Regression** against `data/golden_dataset.json` (deterministic stub; see `docs/CLASS_DEMO_GOLDEN_OBSERVABILITY.md` §2.1). |
+| 3 | GitHub | Open **Actions** → latest **ci-cd** workflow | Show **test** job then **build-push-deploy** (ECR + `kubectl apply`). |
+| 4 | Laptop (AWS CLI configured) | Complete sections **3–14** below if the cluster is not up yet; otherwise skip to step 5. | End-to-end path from account to running pods. |
+| 5 | Laptop | `kubectl get pods -n support-ops-agent` → pods **Running** | Confirms deploy. |
+| 6 | Laptop | `kubectl port-forward -n support-ops-agent svc/support-ops-agent 8000:80` (keep terminal open) | ClusterIP has no public URL in this repo. |
+| 7 | Second terminal / browser | Run the **demo curls** in **§15** (`/health`, `/ready`, `/demo/golden-dataset`, `/agent/respond`, `/metrics`) | Live API + golden data + Prometheus scrape surface. |
+| 8 | AWS Console | **CloudWatch** → **Log groups** → your group (e.g. `/support-ops/agent`) if **direct logging** is enabled, or the log group from **Container Insights / Fluent Bit** | **Application logs** live here — not in Prometheus. |
+| 9 | Optional | **CloudWatch Logs Insights** queries and `ENABLE_LANGCHAIN_TRACE_LOGS` | See `docs/CLASS_DEMO_GOLDEN_OBSERVABILITY.md` §3–4. |
+
+**Docs map:** this file = **CI/CD and AWS setup**. **`docs/CLASS_DEMO_GOLDEN_OBSERVABILITY.md`** = golden tests, errors, Logs Insights, **`/metrics` vs logs**. **`README.md`** = local dev and API table.
+
+---
+
 ## 2. AWS Free Tier and real costs (read this first)
 
 The **AWS Free Tier** (first 12 months for many services) helps with **EC2**, **Lambda**, **S3**, and other services, but:
@@ -179,9 +199,7 @@ kubectl get pods -A
 
 2. Name the secret `support-ops-agent/openai` (matches `AWS_SECRETS_MANAGER_SECRET_NAME` in `deployment/k8s/configmap.yaml`) or change the ConfigMap to match your secret name.
 
-3. Note the secret **ARN** for IAM policies below.
-
-arn:aws:secretsmanager:us-east-1:074388197187:secret:support-ops-agent/openai-vvPuwJ
+3. Note the secret **ARN** for IAM policies in §10 (replace `REGION`, `ACCOUNT_ID`, and name prefix in IAM policies).
 
 ---
 
@@ -257,6 +275,8 @@ ENABLE_CLOUDWATCH_LOGGING: "true"
 
 If IAM is wrong, the app **keeps running** and logs a warning to stdout; fix the role and rollout again.
 
+For a **step-by-step class demo** (golden dataset endpoint, structured error fields, CloudWatch Logs Insights queries, and **Prometheus `/metrics` vs logs**), see `docs/CLASS_DEMO_GOLDEN_OBSERVABILITY.md`.
+
 ---
 
 ## 12. Align ConfigMap with your account
@@ -269,6 +289,7 @@ Before relying on CI, verify `deployment/k8s/configmap.yaml`:
 | `AWS_SECRETS_MANAGER_SECRET_NAME` | Your Secrets Manager secret name or ARN. |
 | `CLOUDWATCH_LOG_GROUP` | Desired log group path. |
 | `ENABLE_CLOUDWATCH_LOGGING` | `true` or `false`. |
+| `ENABLE_LANGCHAIN_TRACE_LOGS` | `true` to emit LangChain span-style JSON logs (more volume; good for **Logs Insights** demos). |
 | `SECRETS_SOURCE` | `aws_secrets_manager` for production EKS (as in the sample). |
 
 ---
@@ -306,16 +327,43 @@ If deploy fails:
 
 ---
 
-## 15. Reach the API from your laptop
+## 15. Reach the API from your laptop (class demo curls)
 
-The Service is **ClusterIP** (`deployment/k8s/service.yaml`), so nothing is public by default.
+The Service is **ClusterIP** (`deployment/k8s/service.yaml`), so nothing is public by default. Use **port-forward** in one terminal and run the commands below in another.
 
-For a quick test:
+**Terminal A — port forward (leave running):**
 
 ```bash
 kubectl port-forward -n support-ops-agent svc/support-ops-agent 8000:80
-curl -s http://localhost:8000/health
 ```
+
+**Terminal B — smoke checks (copy as a block or line by line):**
+
+```bash
+# Liveness and readiness (readiness needs Secrets Manager + key when using production config)
+curl -s http://localhost:8000/health
+curl -s http://localhost:8000/ready
+
+# Safe config snapshot (no secrets)
+curl -s http://localhost:8000/config/check | jq .
+
+# Teaching golden dataset (same data as regression tests)
+curl -s http://localhost:8000/demo/golden-dataset | jq .
+
+# Real agent call (uses OpenAI; costs a small amount per request)
+curl -s http://localhost:8000/agent/respond \
+  -H 'Content-Type: application/json' \
+  -H 'X-Request-ID: class-demo-001' \
+  -d '{"user_query":"A learner wants to defer to the next cohort."}' | jq .
+
+# Prometheus metrics (numeric series — not log lines)
+curl -s http://localhost:8000/metrics | head -50
+
+# Human-readable JSON counters (same app, different format)
+curl -s http://localhost:8000/metrics-summary | jq .
+```
+
+Use **`X-Request-ID`** (as above) so you can find the same request in **CloudWatch Logs Insights** (see `docs/CLASS_DEMO_GOLDEN_OBSERVABILITY.md` §4.3).
 
 For HTTPS and a public URL, add an **Ingress** with **AWS Load Balancer Controller** or **API Gateway** in front; that is outside this repo’s baseline (see main `README.md`).
 
@@ -339,5 +387,7 @@ For HTTPS and a public URL, add an **Ingress** with **AWS Load Balancer Controll
 | `deployment/k8s/configmap.yaml` | Non-secret env: region, Secrets Manager name, CloudWatch flags. |
 | `deployment/k8s/deployment.yaml` | Image placeholder `REPLACE_IMAGE_URI` replaced in CI. |
 | `deployment/k8s/service.yaml` | ClusterIP service on port 80 → container 8000. |
+| `docs/CLASS_DEMO_GOLDEN_OBSERVABILITY.md` | Class script: golden regression, errors, CloudWatch Insights, Prometheus vs logs. |
+| `scripts/run_golden_regression.sh` | Run golden regression tests locally (same idea as CI `pytest`). |
 
-You now have an end-to-end path from **local Docker** to **GitHub-driven deploys on EKS** with **Secrets Manager** and **CloudWatch** aligned with this application’s configuration.
+You now have an end-to-end path from **local Docker** to **GitHub-driven deploys on EKS** with **Secrets Manager** and **CloudWatch** aligned with this application’s configuration. For a **single checklist** you can project in class, start at **§1.1** above.

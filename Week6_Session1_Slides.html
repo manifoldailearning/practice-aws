@@ -1,0 +1,1122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Week 6 Session 1: Containerization & Cloud Deployment</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #0d2137 0%, #1a3a5c 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+            overflow: hidden;
+            display: flex;
+            min-height: 90vh;
+        }
+        .sidebar {
+            width: 320px;
+            background: linear-gradient(180deg, #0d47a1 0%, #1565c0 100%);
+            color: white;
+            padding: 30px 20px;
+            overflow-y: auto;
+            flex-shrink: 0;
+        }
+        .logo { font-size: 22px; font-weight: bold; margin-bottom: 8px; }
+        .subtitle { font-size: 13px; color: #90caf9; margin-bottom: 8px; }
+        .session-info { font-size: 12px; color: #64b5f6; margin-bottom: 25px; padding: 10px; background: rgba(255,255,255,0.1); border-radius: 8px; }
+        .nav-section { font-size: 11px; color: #5c8fc7; margin: 20px 0 10px 0; text-transform: uppercase; letter-spacing: 1px; }
+        .nav-item {
+            padding: 12px 15px;
+            margin: 4px 0;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .nav-item:hover { background: rgba(255,255,255,0.15); transform: translateX(5px); }
+        .nav-item.active { background: rgba(255,255,255,0.25); font-weight: bold; }
+        .main-content {
+            flex: 1;
+            padding: 40px;
+            overflow-y: auto;
+            background: #f8f9fa;
+        }
+        .section { display: none; animation: fadeIn 0.3s; }
+        .section.active { display: block; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        h1 { font-size: 32px; font-weight: 800; color: #0d47a1; margin-bottom: 10px; }
+        h2 { font-size: 22px; font-weight: 700; color: #1565c0; margin: 30px 0 15px; }
+        h3 { font-size: 17px; font-weight: 600; color: #1976d2; margin-bottom: 10px; }
+        h4 { font-size: 15px; font-weight: 600; color: #0d47a1; margin-bottom: 8px; }
+        p { color: #555; line-height: 1.7; margin-bottom: 12px; }
+        .highlight-box {
+            background: linear-gradient(135deg, #e3f2fd, #f0f7ff);
+            border-left: 5px solid #1976d2;
+            border-radius: 10px;
+            padding: 20px 25px;
+            margin: 20px 0;
+        }
+        .success-box {
+            background: linear-gradient(135deg, #e8f5e9, #f1f8e9);
+            border-left: 5px solid #43a047;
+            border-radius: 10px;
+            padding: 20px 25px;
+            margin: 20px 0;
+        }
+        .warning-box {
+            background: linear-gradient(135deg, #fff8e1, #fffde7);
+            border-left: 5px solid #f9a825;
+            border-radius: 10px;
+            padding: 20px 25px;
+            margin: 20px 0;
+        }
+        .danger-box {
+            background: linear-gradient(135deg, #fce4ec, #ffeef5);
+            border-left: 5px solid #e53935;
+            border-radius: 10px;
+            padding: 20px 25px;
+            margin: 20px 0;
+        }
+        .key-insight {
+            background: linear-gradient(135deg, #0d47a1, #1565c0);
+            color: white;
+            border-radius: 12px;
+            padding: 20px 25px;
+            margin: 25px 0;
+            font-size: 15px;
+            line-height: 1.6;
+        }
+        .key-insight .insight-label { font-size: 11px; text-transform: uppercase; letter-spacing: 2px; color: #90caf9; margin-bottom: 8px; }
+        .key-insight .insight-text { font-size: 18px; font-weight: 700; }
+        .step-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+        .step-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            border-top: 4px solid #1976d2;
+            transition: transform 0.2s;
+        }
+        .step-card:hover { transform: translateY(-3px); }
+        .step-num { font-size: 28px; margin-bottom: 10px; }
+        pre, code { font-family: 'Fira Code', 'Cascadia Code', 'Courier New', monospace; }
+        .code-block {
+            background: #1e1e2e;
+            color: #cdd6f4;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+            overflow-x: auto;
+            font-size: 13px;
+            line-height: 1.6;
+            position: relative;
+        }
+        .code-block .comment { color: #6c7086; }
+        .code-label {
+            display: inline-block;
+            background: #313244;
+            color: #89b4fa;
+            font-size: 11px;
+            padding: 3px 10px;
+            border-radius: 4px;
+            margin-bottom: 8px;
+            font-family: monospace;
+        }
+        .metric-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .metric-card {
+            background: white;
+            border-radius: 10px;
+            padding: 18px;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+        .metric-value { font-size: 32px; font-weight: 800; color: #0d47a1; }
+        .metric-label { font-size: 12px; color: #888; margin-top: 5px; }
+        .metric-sub { font-size: 11px; color: #bbb; margin-top: 3px; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        }
+        th {
+            background: #0d47a1;
+            color: white;
+            padding: 12px 16px;
+            text-align: left;
+            font-size: 13px;
+        }
+        td {
+            padding: 11px 16px;
+            border-bottom: 1px solid #eee;
+            font-size: 13px;
+            color: #444;
+        }
+        tr:last-child td { border-bottom: none; }
+        tr:nth-child(even) { background: #f8f9fa; }
+        .badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        .badge-blue { background: #e3f2fd; color: #0d47a1; }
+        .badge-green { background: #e8f5e9; color: #2e7d32; }
+        .badge-orange { background: #fff3e0; color: #e65100; }
+        .badge-red { background: #fce4ec; color: #c62828; }
+        .agenda-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 12px 16px;
+            margin: 8px 0;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+        .agenda-time {
+            font-size: 12px;
+            color: #1976d2;
+            font-weight: 700;
+            min-width: 80px;
+        }
+        .agenda-topic { font-size: 14px; color: #333; }
+        code { background: #e3f2fd; color: #0d47a1; padding: 2px 6px; border-radius: 4px; font-size: 13px; }
+        .compare-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 20px 0; }
+        .compare-bad { background: #fce4ec; border-radius: 10px; padding: 16px; border-top: 4px solid #e53935; }
+        .compare-good { background: #e8f5e9; border-radius: 10px; padding: 16px; border-top: 4px solid #43a047; }
+        .compare-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+        .compare-bad .compare-label { color: #c62828; }
+        .compare-good .compare-label { color: #2e7d32; }
+        .principle-card {
+            background: white;
+            border-radius: 10px;
+            padding: 18px 20px;
+            margin: 10px 0;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+            display: flex;
+            align-items: flex-start;
+            gap: 15px;
+        }
+        .principle-num {
+            background: #0d47a1;
+            color: white;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+        .checklist { list-style: none; padding: 0; }
+        .checklist li { padding: 8px 0; border-bottom: 1px solid #f0f0f0; display: flex; align-items: flex-start; gap: 10px; font-size: 14px; color: #444; }
+        .checklist li:last-child { border-bottom: none; }
+        .check-yes { color: #43a047; font-size: 16px; flex-shrink: 0; }
+        .check-no { color: #e53935; font-size: 16px; flex-shrink: 0; }
+        .cloud-card {
+            background: white;
+            border-radius: 12px;
+            padding: 22px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            border-top: 5px solid #1976d2;
+            margin: 10px 0;
+        }
+        .cloud-card.aws { border-top-color: #ff9900; }
+        .cloud-card.gcp { border-top-color: #4285f4; }
+        .cloud-card.azure { border-top-color: #0078d4; }
+        .cloud-title { font-size: 18px; font-weight: 800; margin-bottom: 6px; }
+        .cloud-subtitle { font-size: 12px; color: #888; margin-bottom: 14px; }
+        .secret-level {
+            background: white;
+            border-radius: 10px;
+            padding: 15px 20px;
+            margin: 8px 0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            display: flex;
+            gap: 15px;
+            align-items: flex-start;
+        }
+        .level-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+        .level-never { background: #fce4ec; color: #c62828; }
+        .level-dev { background: #fff8e1; color: #f57f17; }
+        .level-ok { background: #e3f2fd; color: #1565c0; }
+        .level-prod { background: #e8f5e9; color: #2e7d32; }
+        .level-enterprise { background: #f3e5f5; color: #6a1b9a; }
+        .cicd-job {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 12px 0;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            border-left: 5px solid #1976d2;
+        }
+        .cicd-job-title { font-size: 16px; font-weight: 700; color: #0d47a1; margin-bottom: 6px; }
+        .cicd-job-trigger { font-size: 12px; color: #888; margin-bottom: 10px; }
+        .assignment-card {
+            background: linear-gradient(135deg, #0d2137, #1a3a5c);
+            color: white;
+            border-radius: 16px;
+            padding: 30px;
+            margin: 20px 0;
+        }
+        .assignment-title { font-size: 20px; font-weight: 800; margin-bottom: 15px; }
+        .assignment-item { display: flex; align-items: flex-start; gap: 12px; margin: 12px 0; font-size: 14px; line-height: 1.6; }
+        .assignment-num { background: rgba(255,255,255,0.2); color: white; width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 12px; flex-shrink: 0; margin-top: 2px; }
+        .flow-step {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 18px;
+            margin: 6px 0;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            font-size: 14px;
+        }
+        .flow-icon { font-size: 22px; flex-shrink: 0; }
+        .flow-arrow-down { text-align: center; font-size: 18px; color: #1976d2; margin: 4px 0; }
+        .instructor-note {
+            background: linear-gradient(135deg, #fff8e1, #fffde7);
+            border-left: 5px solid #f9a825;
+            border-radius: 10px;
+            padding: 14px 20px;
+            margin: 16px 0;
+            font-size: 13px;
+            color: #7c5e00;
+        }
+        .instructor-note strong { color: #e65100; }
+        .tag-row { display: flex; gap: 8px; flex-wrap: wrap; margin: 10px 0; }
+        .tag { padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; background: #e3f2fd; color: #0d47a1; }
+        .tag.green { background: #e8f5e9; color: #2e7d32; }
+        .tag.orange { background: #fff3e0; color: #e65100; }
+        .tag.red { background: #fce4ec; color: #c62828; }
+    </style>
+</head>
+<body>
+<div class="container">
+
+    <!-- ═══════════════ SIDEBAR ═══════════════ -->
+    <div class="sidebar">
+        <div class="logo">🤖 Agentic AI Bootcamp</div>
+        <div class="subtitle">Enterprise Mastery Program</div>
+        <div class="session-info">
+            📅 Week 6 — Session 1<br>
+            ⏱ Saturday · 3 Hours<br>
+            🎯 Containerization & Cloud Deployment<br>
+            📁 Repo: <strong>practice-aws/</strong>
+        </div>
+
+        <div class="nav-section">Navigation</div>
+
+        <div class="nav-item active" onclick="showSection('overview', this)">🏠 <span>Overview & Agenda</span></div>
+        <div class="nav-item" onclick="showSection('bigpicture', this)">🌐 <span>The Big Picture</span></div>
+        <div class="nav-item" onclick="showSection('docker', this)">🐳 <span>Docker Best Practices</span></div>
+        <div class="nav-item" onclick="showSection('cloud', this)">☁️ <span>AWS Service Guide</span></div>
+        <div class="nav-item" onclick="showSection('secrets', this)">🔐 <span>Secrets Management</span></div>
+        <div class="nav-item" onclick="showSection('cicd', this)">⚙️ <span>CI/CD Pipelines</span></div>
+        <div class="nav-item" onclick="showSection('iac', this)">🏗️ <span>Kubernetes & IaC</span></div>
+        <div class="nav-item" onclick="showSection('e2e', this)">🚀 <span>End-to-End Walkthrough</span></div>
+        <div class="nav-item" onclick="showSection('checklist', this)">📋 <span>Checklist & Reference</span></div>
+    </div>
+
+    <!-- ═══════════════ MAIN CONTENT ═══════════════ -->
+    <div class="main-content">
+
+        <!-- ===== OVERVIEW ===== -->
+        <div id="overview" class="section active">
+            <h1>Containerization & Cloud Deployment</h1>
+            <p style="font-size:16px;color:#1565c0;font-weight:600;">Week 6 · Session 1 · Saturday</p>
+
+            <div class="key-insight">
+                <div class="insight-label">🔑 Session Key Insight</div>
+                <div class="insight-text">"Systems ship. Demos don't." — Today we go from laptop to live URL.</div>
+            </div>
+
+            <div class="metric-grid">
+                <div class="metric-card">
+                    <div class="metric-value">3h</div>
+                    <div class="metric-label">Session Duration</div>
+                    <div class="metric-sub">7 blocks + Q&A</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">6</div>
+                    <div class="metric-label">Key files we open</div>
+                    <div class="metric-sub">all in practice-aws/</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">0</div>
+                    <div class="metric-label">Downtime on deploy</div>
+                    <div class="metric-sub">rolling update strategy</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">1</div>
+                    <div class="metric-label">git push to ship</div>
+                    <div class="metric-sub">CI/CD does the rest</div>
+                </div>
+            </div>
+
+            <h2>Today's Roadmap</h2>
+            <div class="agenda-item"><div class="agenda-time">0:00–0:15</div><div class="agenda-topic">🌐 Block 1 — The Big Picture: Why deployment matters</div></div>
+            <div class="agenda-item"><div class="agenda-time">0:15–0:55</div><div class="agenda-topic">🐳 Block 2 — Docker: Containerise our Support Ops Agent</div></div>
+            <div class="agenda-item"><div class="agenda-time">0:55–1:15</div><div class="agenda-topic">☁️ Block 3 — AWS Services: ECR + EKS + Secrets Manager</div></div>
+            <div class="agenda-item"><div class="agenda-time">1:15–1:45</div><div class="agenda-topic">🔐 Block 4 — Secrets & Environment Variables in Production</div></div>
+            <div class="agenda-item" style="background:#fff3e0;"><div class="agenda-time" style="color:#e65100;">BREAK</div><div class="agenda-topic" style="color:#e65100;">☕ 10 minutes</div></div>
+            <div class="agenda-item"><div class="agenda-time">1:55–2:25</div><div class="agenda-topic">⚙️ Block 5 — CI/CD Pipelines: GitHub Actions deploy.yml</div></div>
+            <div class="agenda-item"><div class="agenda-time">2:25–2:45</div><div class="agenda-topic">🏗️ Block 6 — Kubernetes Manifests & Infrastructure as Code</div></div>
+            <div class="agenda-item"><div class="agenda-time">2:45–3:10</div><div class="agenda-topic">🚀 Block 7 — End-to-End Walkthrough + Q&A</div></div>
+
+            <h2>Key Files We Use Today</h2>
+            <table>
+                <thead><tr><th>File</th><th>Topic</th><th>Block</th></tr></thead>
+                <tbody>
+                    <tr><td><code>Dockerfile</code></td><td>Container build — layer caching, non-root user, slim base</td><td>Block 2</td></tr>
+                    <tr><td><code>app/core/config.py</code></td><td>Secrets source auto-switching (env vs AWS Secrets Manager)</td><td>Block 4</td></tr>
+                    <tr><td><code>app/core/secrets.py</code></td><td>SecretsProvider abstraction — Strategy pattern</td><td>Block 4</td></tr>
+                    <tr><td><code>app/api/routes.py</code></td><td>/health, /ready, /agent/respond, /agent/stream endpoints</td><td>Block 3, 7</td></tr>
+                    <tr><td><code>deployment/k8s/deployment.yaml</code></td><td>Replicas, probes, resources, rolling update</td><td>Block 6</td></tr>
+                    <tr><td><code>deployment/k8s/configmap.yaml</code></td><td>Non-sensitive environment variables</td><td>Block 4, 6</td></tr>
+                    <tr><td><code>.github/workflows/deploy.yml</code></td><td>GitHub Actions — test → build → push → deploy</td><td>Block 5</td></tr>
+                </tbody>
+            </table>
+
+            <div class="success-box">
+                <h4>🎯 What You Will Be Able to Do After This Session</h4>
+                <p>Containerise any FastAPI + LangGraph agent, push it to a private registry, and deploy it to Kubernetes on AWS — with secrets loaded securely and every deploy triggered automatically by a git push.</p>
+            </div>
+        </div>
+
+        <!-- ===== BIG PICTURE ===== -->
+        <div id="bigpicture" class="section">
+            <h1>Block 1 — The Big Picture</h1>
+            <p style="font-size:16px;color:#1565c0;font-weight:600;">15 minutes · Why deployment matters</p>
+
+            <div class="key-insight">
+                <div class="insight-label">🔑 Opening Question</div>
+                <div class="insight-text">How many of you have built an agent that only lives on your laptop? — After today, that changes.</div>
+            </div>
+
+            <h2>Demo World vs Production World</h2>
+            <p>Every line of code we write today in the bootcamp eventually needs to reach real users. That journey from <em>"it works on my machine"</em> to <em>"my users can reach it"</em> is what we cover today. Let's be specific about what changes.</p>
+
+            <table>
+                <thead><tr><th>Concern</th><th>Demo World</th><th>Production World</th></tr></thead>
+                <tbody>
+                    <tr><td><strong>Secrets</strong></td><td>API key in a .env file on your laptop</td><td>AWS Secrets Manager — never in code</td></tr>
+                    <tr><td><strong>Packaging</strong></td><td><code>python main.py</code> on your machine</td><td>Docker image — identical everywhere</td></tr>
+                    <tr><td><strong>Deployment</strong></td><td>Manual, one-off</td><td>CI/CD — git push triggers the deploy</td></tr>
+                    <tr><td><strong>Scaling</strong></td><td>One process, one machine</td><td>Multiple pods, auto-scaled by Kubernetes</td></tr>
+                    <tr><td><strong>Observability</strong></td><td>Print statements</td><td>Structured JSON logs → CloudWatch</td></tr>
+                    <tr><td><strong>Reliability</strong></td><td>You restart it manually</td><td>Kubernetes restarts failed pods automatically</td></tr>
+                </tbody>
+            </table>
+
+            <h2>Our Agent: Support Operations Agent</h2>
+            <p>The code in <code>practice-aws/</code> is a real production-grade support agent. Here is what it does end-to-end:</p>
+
+            <div class="flow-step"><div class="flow-icon">📩</div><div><strong>Client</strong> sends a user query via POST /agent/respond</div></div>
+            <div class="flow-arrow-down">↓</div>
+            <div class="flow-step"><div class="flow-icon">⚡</div><div><strong>FastAPI</strong> receives the request, assigns a request ID, starts the timer</div></div>
+            <div class="flow-arrow-down">↓</div>
+            <div class="flow-step"><div class="flow-icon">🔗</div><div><strong>LangGraph</strong> runs a 6-node pipeline (classify → retrieve policy → recommend → draft reply → summarise → done)</div></div>
+            <div class="flow-arrow-down">↓</div>
+            <div class="flow-step"><div class="flow-icon">🤖</div><div><strong>OpenAI</strong> is called at each node — key loaded from AWS Secrets Manager in production</div></div>
+            <div class="flow-arrow-down">↓</div>
+            <div class="flow-step"><div class="flow-icon">📊</div><div><strong>Structured JSON</strong> response returned + metrics recorded + logs emitted to CloudWatch</div></div>
+
+            <div class="highlight-box">
+                <h4>🏗️ Everything today connects to this flow</h4>
+                <p>Docker packages the FastAPI app. ECR stores the image. EKS runs it at scale. Secrets Manager securely provides the API key. GitHub Actions deploys new versions automatically. Kubernetes probes verify it is healthy before sending traffic.</p>
+            </div>
+
+            <div class="instructor-note">
+                <strong>📣 INSTRUCTOR NOTE:</strong> Draw the three-box diagram on the board: [Your Laptop] → [ECR] → [EKS]. Tell learners we are going to fill in every step of this journey together.
+            </div>
+        </div>
+
+        <!-- ===== DOCKER ===== -->
+        <div id="docker" class="section">
+            <h1>Block 2 — Docker: Containerise the Agent</h1>
+            <p style="font-size:16px;color:#1565c0;font-weight:600;">40 minutes · File: <code>Dockerfile</code></p>
+
+            <h2>What Is a Container?</h2>
+            <p>A container packages your application with everything it needs — Python version, libraries, system settings — into a single self-contained unit. Build it once, and it runs identically on your laptop, a colleague's machine, or an AWS server in Singapore.</p>
+            <p>Think of it like shipping a product in a box. The box (container) contains exactly what's needed. The courier (cloud provider) doesn't need to know what's inside — they just deliver the box.</p>
+
+            <h2>Walking Through Our Dockerfile</h2>
+            <p>Open <code>Dockerfile</code> in the project root. Every line has a deliberate reason.</p>
+
+            <div class="code-label">Dockerfile</div>
+            <div class="code-block">
+<span class="comment"># syntax=docker/dockerfile:1</span>
+FROM python:3.11.9-slim-bookworm AS base</div>
+
+            <div class="highlight-box">
+                <h4>Why <code>slim-bookworm</code>?</h4>
+                <p>The "slim" variant strips out documentation and unused tools — smaller attack surface, faster image pulls. Smaller images deploy faster and cost less to store in ECR.</p>
+            </div>
+
+            <div class="code-label">Dockerfile — ENV block</div>
+            <div class="code-block">
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1</div>
+
+            <table>
+                <thead><tr><th>Variable</th><th>Why It Matters</th></tr></thead>
+                <tbody>
+                    <tr><td><code>PYTHONDONTWRITEBYTECODE=1</code></td><td>No .pyc files → smaller image</td></tr>
+                    <tr><td><code>PYTHONUNBUFFERED=1</code></td><td>Log output goes to stdout immediately — critical for cloud log streams</td></tr>
+                    <tr><td><code>PIP_NO_CACHE_DIR=1</code></td><td>Don't cache pip downloads inside the image → smaller image</td></tr>
+                </tbody>
+            </table>
+
+            <h3>🔒 Non-Root User — Non-Negotiable Security</h3>
+            <div class="code-label">Dockerfile — Security</div>
+            <div class="code-block">
+RUN addgroup --system --gid 10001 appgroup \
+    &amp;&amp; adduser --system --uid 10001 --ingroup appgroup app
+
+USER 10001</div>
+
+            <div class="danger-box">
+                <h4>⚠️ Never run as root</h4>
+                <p>If someone exploits your app, they get a restricted system user — not root access to the whole machine. This is non-negotiable in enterprise deployments. Our K8s manifest enforces this too: <code>runAsNonRoot: true, runAsUser: 10001</code>.</p>
+            </div>
+
+            <h3>🚀 Layer Caching — The Most Important Docker Performance Trick</h3>
+            <p>Notice the order in the Dockerfile:</p>
+
+            <div class="code-label">Dockerfile — Layer ordering</div>
+            <div class="code-block">
+COPY requirements.txt .          <span class="comment"># ← copied FIRST</span>
+RUN pip install -r requirements.txt
+COPY app ./app                   <span class="comment"># ← application code copied AFTER</span></div>
+
+            <div class="compare-grid">
+                <div class="compare-bad">
+                    <div class="compare-label">❌ Wrong Order</div>
+                    <p style="font-size:13px;color:#555;">Copy all files first, then pip install. Every single code change re-installs ALL packages. A 3-minute install on every deploy.</p>
+                </div>
+                <div class="compare-good">
+                    <div class="compare-label">✅ Our Order</div>
+                    <p style="font-size:13px;color:#555;">requirements.txt first. Docker caches the pip install layer. Code change? Only the app layer rebuilds. Deploy is seconds faster.</p>
+                </div>
+            </div>
+
+            <h3>🧪 Build and Run Locally</h3>
+            <div class="code-label">Terminal</div>
+            <div class="code-block">
+<span class="comment"># Build the image</span>
+docker build -t support-ops-agent:local .
+
+<span class="comment"># Run it — inject the API key as environment variable</span>
+docker run --rm -p 8000:8000 \
+  -e OPENAI_API_KEY="$OPENAI_API_KEY" \
+  -e SECRETS_SOURCE=env \
+  support-ops-agent:local
+
+<span class="comment"># Test it</span>
+curl -s http://localhost:8000/health
+<span class="comment"># → {"status":"ok"}</span></div>
+
+            <h2>Best Practices Checklist</h2>
+            <ul class="checklist">
+                <li><span class="check-yes">✓</span> Pin exact base image tag (<code>python:3.11.9-slim-bookworm</code>) — reproducible builds</li>
+                <li><span class="check-yes">✓</span> Non-root user (UID 10001) — security</li>
+                <li><span class="check-yes">✓</span> Copy requirements.txt before app code — layer caching</li>
+                <li><span class="check-yes">✓</span> <code>PYTHONUNBUFFERED=1</code> — logs appear immediately in cloud</li>
+                <li><span class="check-yes">✓</span> <code>EXPOSE 8000</code> — documents intent, required by orchestrators</li>
+                <li><span class="check-yes">✓</span> exec-form CMD: <code>["uvicorn", ...]</code> — signal handling for graceful shutdown</li>
+                <li><span class="check-no">✗</span> Never embed secrets in Dockerfile — they get baked into image layers forever</li>
+                <li><span class="check-no">✗</span> Never use <code>:latest</code> tag in production — not traceable, not reproducible</li>
+            </ul>
+
+            <div class="key-insight">
+                <div class="insight-label">🔑 Key Insight</div>
+                <div class="insight-text">A good Dockerfile is not just build instructions — it is documentation of your deployment contract.</div>
+            </div>
+
+            <div class="instructor-note">
+                <strong>📣 DEMO:</strong> Run <code>docker build</code>, make a small change to <code>app/main.py</code>, rebuild. Point out which layers are cached (pip install layer stays green). This 2-minute demo teaches more than 10 minutes of slides.
+            </div>
+        </div>
+
+        <!-- ===== CLOUD ===== -->
+        <div id="cloud" class="section">
+            <h1>Block 3 — AWS Services: Which One and Why</h1>
+            <p style="font-size:16px;color:#1565c0;font-weight:600;">20 minutes · ECR + EKS + Secrets Manager</p>
+
+            <h2>The Service Selection Landscape</h2>
+            <p>AWS (and GCP/Azure) offer many ways to run containers. Picking the wrong one means expensive rework. Here is the framework we use.</p>
+
+            <table>
+                <thead><tr><th>Service</th><th>Best For</th><th>AI Agent Fit</th></tr></thead>
+                <tbody>
+                    <tr><td><strong>AWS Lambda</strong></td><td>Short-lived functions &lt;15 min</td><td><span class="badge badge-red">❌ LLM calls can be slow / expensive</span></td></tr>
+                    <tr><td><strong>AWS App Runner</strong></td><td>Simple containerised apps, no K8s needed</td><td><span class="badge badge-orange">Good for prototypes</span></td></tr>
+                    <tr><td><strong>AWS Fargate</strong></td><td>Serverless containers, no cluster to manage</td><td><span class="badge badge-orange">Good middle ground</span></td></tr>
+                    <tr><td><strong>AWS EKS</strong></td><td>Production-grade, full control, scaling</td><td><span class="badge badge-green">✅ Our choice</span></td></tr>
+                    <tr><td><strong>GCP Cloud Run</strong></td><td>Fully managed, scales to zero</td><td><span class="badge badge-green">Excellent alternative</span></td></tr>
+                    <tr><td><strong>Azure Container Apps</strong></td><td>Serverless Kubernetes-managed</td><td><span class="badge badge-green">Excellent alternative</span></td></tr>
+                </tbody>
+            </table>
+
+            <h2>Our AWS Stack — Three Services Working Together</h2>
+
+            <div class="step-grid">
+                <div class="step-card" style="border-top-color:#ff9900;">
+                    <div class="step-num">📦</div>
+                    <h4>Amazon ECR</h4>
+                    <p style="font-size:13px;">Private Docker registry. Stores every image we build. Think: Docker Hub, but private and inside AWS.</p>
+                </div>
+                <div class="step-card" style="border-top-color:#ff9900;">
+                    <div class="step-num">☸️</div>
+                    <h4>Amazon EKS</h4>
+                    <p style="font-size:13px;">Managed Kubernetes. Runs and scales our containers. Handles restarts, rolling updates, health checks.</p>
+                </div>
+                <div class="step-card" style="border-top-color:#ff9900;">
+                    <div class="step-num">🔒</div>
+                    <h4>AWS Secrets Manager</h4>
+                    <p style="font-size:13px;">Secure storage for the OpenAI API key. Your app unlocks it using its IAM identity — no passwords in config files.</p>
+                </div>
+            </div>
+
+            <h2>The Image Journey: Local → ECR → EKS</h2>
+
+            <div class="flow-step"><div class="flow-icon">🏗️</div><div><strong>Step 1:</strong> <code>docker build</code> — image is created locally, tagged with git SHA</div></div>
+            <div class="flow-arrow-down">↓</div>
+            <div class="flow-step"><div class="flow-icon">🔑</div><div><strong>Step 2:</strong> Authenticate to ECR: <code>aws ecr get-login-password | docker login</code></div></div>
+            <div class="flow-arrow-down">↓</div>
+            <div class="flow-step"><div class="flow-icon">📤</div><div><strong>Step 3:</strong> <code>docker push &lt;ecr-uri&gt;/&lt;repo&gt;:&lt;git-sha&gt;</code></div></div>
+            <div class="flow-arrow-down">↓</div>
+            <div class="flow-step"><div class="flow-icon">☸️</div><div><strong>Step 4:</strong> EKS pulls the image when <code>kubectl apply</code> is run with the new deployment.yaml</div></div>
+            <div class="flow-arrow-down">↓</div>
+            <div class="flow-step"><div class="flow-icon">✅</div><div><strong>Step 5:</strong> New pods start, pass /ready probe, receive traffic — old pods terminated</div></div>
+
+            <div class="code-label">Terminal — ECR auth + push</div>
+            <div class="code-block">
+aws ecr get-login-password --region us-east-1 \
+  | docker login --username AWS --password-stdin \
+    &lt;account-id&gt;.dkr.ecr.us-east-1.amazonaws.com
+
+docker push &lt;account-id&gt;.dkr.ecr.us-east-1.amazonaws.com/support-ops-agent:$GIT_SHA</div>
+
+            <div class="success-box">
+                <h4>💡 Why git SHA as the image tag?</h4>
+                <p>Using the commit SHA (not "latest") means every deployed image is 100% traceable. You can always answer: <em>what exact code is running in production right now?</em> — and roll back with confidence.</p>
+            </div>
+
+            <div class="key-insight">
+                <div class="insight-label">🔑 Key Insight</div>
+                <div class="insight-text">Never deploy "latest" in production. A git SHA tag is your audit trail.</div>
+            </div>
+
+            <div class="instructor-note">
+                <strong>📣 INSTRUCTOR NOTE:</strong> Draw ECR → EKS on the board. Show the ECR console in AWS if possible — learners are often surprised it's just a private Docker Hub.
+            </div>
+        </div>
+
+        <!-- ===== SECRETS ===== -->
+        <div id="secrets" class="section">
+            <h1>Block 4 — Secrets & Environment Variables</h1>
+            <p style="font-size:16px;color:#1565c0;font-weight:600;">30 minutes · Files: <code>app/core/config.py</code> &amp; <code>app/core/secrets.py</code></p>
+
+            <div class="danger-box">
+                <h4>⛔ The Secrets Problem</h4>
+                <p>Your agent needs an OpenAI API key. In development you put it in a .env file. In production that approach fails — .env files do not belong in Docker images or git repos. They do not rotate, audit, or centralise. A leaked key in a Docker image has cost teams thousands of dollars in hours.</p>
+            </div>
+
+            <h2>Our Solution — A Pluggable Secrets Provider</h2>
+            <p>The codebase uses an abstraction: a <strong>SecretsProvider</strong> that switches automatically based on environment. Open <code>app/core/secrets.py</code>:</p>
+
+            <div class="code-label">app/core/secrets.py — the abstraction</div>
+            <div class="code-block">
+class SecretsProvider(ABC):
+    @abstractmethod
+    def get_openai_api_key(self) -> str: ...
+
+class EnvSecretsProvider(SecretsProvider):
+    <span class="comment"># reads OPENAI_API_KEY from the process environment</span>
+    def get_openai_api_key(self) -> str:
+        return os.environ["OPENAI_API_KEY"]
+
+class AwsSecretsManagerProvider(SecretsProvider):
+    <span class="comment"># calls AWS Secrets Manager, parses JSON, caches the result</span>
+    def get_openai_api_key(self) -> str:
+        secret = self._client.get_secret_value(SecretId=self._secret_name)
+        return json.loads(secret["SecretString"])["OPENAI_API_KEY"]</div>
+
+            <div class="highlight-box">
+                <h4>🏛️ This is the Strategy Pattern</h4>
+                <p>The app only calls <code>get_openai_api_key()</code>. It does not care whether the key comes from an env var or AWS. Swapping providers requires zero changes to business logic.</p>
+            </div>
+
+            <h2>How the Provider Is Chosen — config.py</h2>
+            <p>Open <code>app/core/config.py</code>. The <code>secrets_source</code> field defaults to <code>"auto"</code>:</p>
+
+            <div class="code-label">app/core/config.py — auto-switching logic</div>
+            <div class="code-block">
+@property
+def resolved_secrets_source(self) -> Literal["env", "aws_secrets_manager"]:
+    if self.secrets_source != "auto":
+        return self.secrets_source
+    <span class="comment"># auto mode: production/staging → AWS Secrets Manager, else → env</span>
+    if self.environment.lower() in {"production", "staging"}:
+        return "aws_secrets_manager"
+    return "env"</div>
+
+            <h2>The Secrets Hierarchy — Where Each Value Lives</h2>
+
+            <div class="secret-level">
+                <span class="level-badge level-never">❌ NEVER</span>
+                <div><strong>Hardcoded in code or Dockerfile</strong><br><small style="color:#888">e.g. <code>api_key = "sk-abc123"</code> — baked into image layers, visible in git history forever</small></div>
+            </div>
+            <div class="secret-level">
+                <span class="level-badge level-dev">DEV ONLY</span>
+                <div><strong>.env file / local environment variable</strong><br><small style="color:#888">Fine on your laptop. Never commit. Never inside a container image.</small></div>
+            </div>
+            <div class="secret-level">
+                <span class="level-badge level-ok">CONFIG</span>
+                <div><strong>Kubernetes ConfigMap / environment variables</strong><br><small style="color:#888">For non-sensitive config: <code>ENVIRONMENT</code>, <code>LOG_LEVEL</code>, <code>OPENAI_MODEL</code>, <code>ENABLE_CLOUDWATCH_LOGGING</code></small></div>
+            </div>
+            <div class="secret-level">
+                <span class="level-badge level-prod">✅ PRODUCTION</span>
+                <div><strong>AWS Secrets Manager</strong><br><small style="color:#888">For <code>OPENAI_API_KEY</code> and any credential. Fetched at runtime, audited, rotatable, never in YAML.</small></div>
+            </div>
+
+            <h2>Setting Up AWS Secrets Manager</h2>
+
+            <div class="code-label">Terminal — one-time setup per environment</div>
+            <div class="code-block">
+<span class="comment"># 1. Create the secret</span>
+aws secretsmanager create-secret \
+  --name "support-ops-agent/openai" \
+  --secret-string '{"OPENAI_API_KEY": "sk-..."}'
+
+<span class="comment"># 2. Grant EKS pod permission via IAM role (IRSA)</span>
+<span class="comment">#    secretsmanager:GetSecretValue on the secret ARN</span>
+
+<span class="comment"># 3. Set environment or secrets_source flag</span>
+<span class="comment">#    ENVIRONMENT=production  →  auto picks AWS Secrets Manager</span></div>
+
+            <div class="key-insight">
+                <div class="insight-label">🔑 Golden Rule of Secrets</div>
+                <div class="insight-text">If a value would cause damage if leaked, it belongs in Secrets Manager. If it is just configuration, a ConfigMap is fine. Never put secrets in YAML manifests, Dockerfiles, or git.</div>
+            </div>
+
+            <div class="instructor-note">
+                <strong>📣 DEMO:</strong> Open <code>secrets.py</code> and <code>config.py</code> side by side. Trace the code path: startup → lifespan → build_secrets_provider → get_openai_api_key(). Then search the whole codebase for "OPENAI_API_KEY" — show it is read once and never passed to any logger.
+            </div>
+        </div>
+
+        <!-- ===== CI/CD ===== -->
+        <div id="cicd" class="section">
+            <h1>Block 5 — CI/CD Pipelines for AI Agents</h1>
+            <p style="font-size:16px;color:#1565c0;font-weight:600;">30 minutes · File: <code>.github/workflows/deploy.yml</code></p>
+
+            <h2>What Is CI/CD and Why Do AI Teams Need It?</h2>
+            <p><strong>CI/CD</strong> = Continuous Integration / Continuous Deployment. Every time you push code, an automated pipeline tests it, packages it, and deploys it — without anyone running commands manually.</p>
+            <p>For AI agents this matters even more: your agent's behaviour changes every time you adjust a prompt, a tool, or a graph node. Without CI/CD, you can never be sure what is actually running in production.</p>
+
+            <div class="highlight-box">
+                <h4>📐 The CI/CD Mental Model</h4>
+                <p style="font-family: monospace; font-size: 14px; color: #0d47a1;">
+                    git push → tests run → if green → new version goes live → rollback is just another git push
+                </p>
+            </div>
+
+            <h2>Our Pipeline — Two Jobs</h2>
+            <p>Open <code>.github/workflows/deploy.yml</code>. Triggered on every push to <code>main</code>.</p>
+
+            <div class="cicd-job">
+                <div class="cicd-job-title">✅ Job 1: test</div>
+                <div class="cicd-job-trigger">Runs on every push to main</div>
+                <table style="margin:0;">
+                    <thead><tr><th>Step</th><th>What It Does</th></tr></thead>
+                    <tbody>
+                        <tr><td>1</td><td>actions/checkout@v4 — check out the code</td></tr>
+                        <tr><td>2</td><td>Set up Python 3.11 with pip caching</td></tr>
+                        <tr><td>3</td><td>pip install -r requirements.txt</td></tr>
+                        <tr><td>4</td><td>pytest with <code>SECRETS_SOURCE=env</code> and a dummy API key</td></tr>
+                    </tbody>
+                </table>
+                <div class="warning-box" style="margin-top:12px;">
+                    <h4>Why a dummy API key in CI?</h4>
+                    <p style="margin:0;">Tests mock the LLM — they never call the real OpenAI. So <code>OPENAI_API_KEY=sk-test-ci</code> is valid. Real secrets never touch the CI runner.</p>
+                </div>
+            </div>
+
+            <div class="cicd-job" style="border-left-color: #43a047;">
+                <div class="cicd-job-title" style="color: #2e7d32;">🚀 Job 2: build-push-deploy</div>
+                <div class="cicd-job-trigger">Only runs if Job 1 (test) passes — <code>needs: test</code></div>
+                <table style="margin:0;">
+                    <thead><tr><th>Step</th><th>What It Does</th></tr></thead>
+                    <tbody>
+                        <tr><td>1</td><td>Configure AWS credentials from GitHub secrets</td></tr>
+                        <tr><td>2</td><td>Log in to Amazon ECR</td></tr>
+                        <tr><td>3</td><td>Build Docker image tagged with <code>${{ github.sha }}</code></td></tr>
+                        <tr><td>4</td><td>Push image to ECR</td></tr>
+                        <tr><td>5</td><td>Install kubectl, update kubeconfig for EKS cluster</td></tr>
+                        <tr><td>6</td><td>Inject real image URI into deployment.yaml (sed replace)</td></tr>
+                        <tr><td>7</td><td>kubectl apply all Kubernetes manifests</td></tr>
+                        <tr><td>8</td><td>kubectl rollout status — wait for completion</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h2>GitHub Secrets Required</h2>
+            <div class="code-label">.github/workflows/deploy.yml — secrets used</div>
+            <div class="code-block">
+AWS_ACCESS_KEY_ID       <span class="comment"># AWS credentials for the CI runner</span>
+AWS_SECRET_ACCESS_KEY   <span class="comment"># (prefer OIDC for production — see tip below)</span>
+AWS_REGION              <span class="comment"># e.g. us-east-1</span>
+AWS_ACCOUNT_ID          <span class="comment"># your 12-digit AWS account number</span>
+ECR_REPOSITORY          <span class="comment"># name of the ECR repo</span>
+EKS_CLUSTER_NAME        <span class="comment"># name of your EKS cluster</span>
+K8S_NAMESPACE           <span class="comment"># support-ops-agent</span></div>
+
+            <div class="success-box">
+                <h4>💡 OIDC Tip (production upgrade)</h4>
+                <p>The workflow has <code>id-token: write</code> permission — this is the hook for switching to GitHub OIDC later. OIDC eliminates static AWS keys entirely: GitHub proves its identity to AWS directly. No long-lived credentials.</p>
+            </div>
+
+            <h2>What Happens If a Test Fails?</h2>
+            <p><code>build-push-deploy</code> has <code>needs: test</code>. If tests fail, deployment never starts. Your broken code cannot reach production. This is the CI/CD safety net.</p>
+
+            <div class="key-insight">
+                <div class="insight-label">🔑 Key Insight</div>
+                <div class="insight-text">CI/CD is not a DevOps luxury — it is the mechanism that lets you move fast without breaking things. Every serious AI team ships with a pipeline.</div>
+            </div>
+
+            <div class="instructor-note">
+                <strong>📣 DEMO:</strong> Open <code>deploy.yml</code> live. Walk through each step. Point to <code>IMAGE_TAG=${{ github.sha }}</code> — this is the same git SHA from Block 3. Show how the two blocks connect.
+            </div>
+        </div>
+
+        <!-- ===== IaC ===== -->
+        <div id="iac" class="section">
+            <h1>Block 6 — Kubernetes Manifests & Infrastructure as Code</h1>
+            <p style="font-size:16px;color:#1565c0;font-weight:600;">20 minutes · Folder: <code>deployment/k8s/</code></p>
+
+            <h2>What Is Infrastructure as Code?</h2>
+            <p>IaC means your infrastructure — deployments, networking, scaling — is described in files that live in git, just like your app code. Instead of clicking through cloud consoles, you write YAML and let tools apply it. Anyone with cluster access can deploy with one command.</p>
+
+            <h2>The Five Files in deployment/k8s/</h2>
+            <table>
+                <thead><tr><th>File</th><th>What It Does</th></tr></thead>
+                <tbody>
+                    <tr><td><code>namespace.yaml</code></td><td>Creates an isolated namespace — keeps our workload separate from others on the cluster</td></tr>
+                    <tr><td><code>serviceaccount.yaml</code></td><td>Identity for the pods — annotated with IAM role for Secrets Manager access (IRSA)</td></tr>
+                    <tr><td><code>configmap.yaml</code></td><td>Non-sensitive env vars: ENVIRONMENT, LOG_LEVEL, OPENAI_MODEL, ENABLE_CLOUDWATCH_LOGGING</td></tr>
+                    <tr><td><code>service.yaml</code></td><td>Exposes the deployment inside the cluster (ClusterIP) so traffic can reach our pods</td></tr>
+                    <tr><td><code>deployment.yaml</code></td><td>The main workload spec — replicas, image, probes, resources, rolling update strategy</td></tr>
+                </tbody>
+            </table>
+
+            <h2>Walking Through deployment.yaml</h2>
+
+            <h3>Replicas &amp; Rolling Update</h3>
+            <div class="code-label">deployment/k8s/deployment.yaml — rolling update</div>
+            <div class="code-block">
+spec:
+  replicas: 2                      <span class="comment"># two pods for high availability</span>
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0            <span class="comment"># never take a pod down before a new one is ready</span>
+      maxSurge: 1                  <span class="comment"># spin up one extra pod during the update</span></div>
+
+            <div class="success-box">
+                <h4>🔄 Zero-Downtime Deployments</h4>
+                <p><code>maxUnavailable: 0</code> means Kubernetes brings up the new pod first, checks it is healthy (readiness probe), then terminates the old one. Users never see an outage during a deploy.</p>
+            </div>
+
+            <h3>Resource Requests &amp; Limits</h3>
+            <div class="code-label">deployment/k8s/deployment.yaml — resources</div>
+            <div class="code-block">
+resources:
+  requests:
+    cpu: "250m"     <span class="comment"># 0.25 of a CPU core guaranteed for scheduling</span>
+    memory: "512Mi" <span class="comment"># 512 MB guaranteed</span>
+  limits:
+    cpu: "1000m"    <span class="comment"># max 1 full CPU core</span>
+    memory: "1Gi"   <span class="comment"># max 1 GB — OOM kill if exceeded</span></div>
+
+            <div class="highlight-box">
+                <h4>Why set both requests and limits?</h4>
+                <p><strong>Requests</strong> are what Kubernetes uses to schedule pods onto nodes. <strong>Limits</strong> prevent a runaway LLM call from eating all memory on the node. Always set both for AI workloads.</p>
+            </div>
+
+            <h3>Liveness &amp; Readiness Probes</h3>
+            <div class="code-label">deployment/k8s/deployment.yaml — probes</div>
+            <div class="code-block">
+livenessProbe:
+  httpGet:
+    path: /health        <span class="comment"># GET /health must return 200</span>
+  initialDelaySeconds: 15
+  periodSeconds: 20
+
+readinessProbe:
+  httpGet:
+    path: /ready         <span class="comment"># GET /ready must return 200</span>
+  initialDelaySeconds: 5
+  periodSeconds: 10
+  failureThreshold: 6    <span class="comment"># 6 failures = 60s before marked not-ready</span></div>
+
+            <table>
+                <thead><tr><th>Probe</th><th>Endpoint</th><th>What It Checks</th><th>On Failure</th></tr></thead>
+                <tbody>
+                    <tr><td><strong>Liveness</strong></td><td><code>GET /health</code></td><td>Is the process alive?</td><td>Kubernetes restarts the pod</td></tr>
+                    <tr><td><strong>Readiness</strong></td><td><code>GET /ready</code></td><td>Are config + secrets loadable?</td><td>No traffic sent to this pod</td></tr>
+                </tbody>
+            </table>
+
+            <h3>The ConfigMap Pattern</h3>
+            <div class="code-label">deployment/k8s/deployment.yaml — envFrom</div>
+            <div class="code-block">
+envFrom:
+  - configMapRef:
+      name: support-ops-agent-config</div>
+
+            <p>All keys in the ConfigMap become environment variables in the container. Sensitive values (<code>OPENAI_API_KEY</code>) are fetched at runtime from Secrets Manager — they never appear in the ConfigMap.</p>
+
+            <div class="key-insight">
+                <div class="insight-label">🔑 Key Insight</div>
+                <div class="insight-text">Kubernetes manifests are your system's contract. They describe exactly what should run, where, how many replicas, with what resources — and git records every change to that contract.</div>
+            </div>
+
+            <div class="instructor-note">
+                <strong>📣 DEMO:</strong> Open <code>deployment.yaml</code> and <code>configmap.yaml</code> side by side. Ask: "Why does the ConfigMap have OPENAI_MODEL but not OPENAI_API_KEY?" — This forces learners to connect Block 4 and Block 6 together.
+            </div>
+        </div>
+
+        <!-- ===== E2E ===== -->
+        <div id="e2e" class="section">
+            <h1>Block 7 — End-to-End Walkthrough</h1>
+            <p style="font-size:16px;color:#1565c0;font-weight:600;">25 minutes · git push → live endpoint</p>
+
+            <h2>The Complete Deployment Journey</h2>
+            <p>Trace a single code change all the way to a live endpoint. This is the journey every commit takes once your pipeline is in place.</p>
+
+            <div class="principle-card">
+                <div class="principle-num">1</div>
+                <div><strong>Write code</strong> — add a node to LangGraph, fix a bug, improve a prompt</div>
+            </div>
+            <div class="principle-card">
+                <div class="principle-num">2</div>
+                <div><strong>Commit &amp; push to main</strong> — <code>git commit -m "improve classify node" &amp;&amp; git push</code></div>
+            </div>
+            <div class="principle-card">
+                <div class="principle-num">3</div>
+                <div><strong>GitHub Actions triggers automatically</strong> — no manual steps</div>
+            </div>
+            <div class="principle-card">
+                <div class="principle-num">4</div>
+                <div><strong>Job 1 (test)</strong> — pytest runs; the commit must earn its deploy</div>
+            </div>
+            <div class="principle-card">
+                <div class="principle-num">5</div>
+                <div><strong>Job 2 (build-push-deploy)</strong> — Docker image built, tagged with commit SHA, pushed to ECR</div>
+            </div>
+            <div class="principle-card">
+                <div class="principle-num">6</div>
+                <div><strong>kubectl apply</strong> — new Kubernetes manifests sent to EKS</div>
+            </div>
+            <div class="principle-card">
+                <div class="principle-num">7</div>
+                <div><strong>EKS rolling update</strong> — new pods come up, /ready probe passes, old pods terminate</div>
+            </div>
+            <div class="principle-card">
+                <div class="principle-num">8</div>
+                <div><strong>kubectl rollout status</strong> confirms success — pipeline exits green</div>
+            </div>
+            <div class="principle-card">
+                <div class="principle-num">9</div>
+                <div><strong>Your agent is live.</strong> Call /agent/respond and see the new behaviour.</div>
+            </div>
+
+            <h2>The Four API Endpoints</h2>
+            <table>
+                <thead><tr><th>Endpoint</th><th>What It Does</th><th>When to Use</th></tr></thead>
+                <tbody>
+                    <tr><td><code>POST /agent/respond</code></td><td>Full LangGraph pipeline → one JSON response when complete</td><td>Testing, synchronous clients</td></tr>
+                    <tr><td><code>POST /agent/stream</code></td><td>Same pipeline, streams Server-Sent Events — one event per node</td><td>Production UIs needing real-time feedback</td></tr>
+                    <tr><td><code>GET /health</code></td><td>Liveness — is the process up?</td><td>Kubernetes liveness probe</td></tr>
+                    <tr><td><code>GET /ready</code></td><td>Readiness — secrets loaded, config valid?</td><td>Kubernetes readiness probe</td></tr>
+                    <tr><td><code>GET /metrics-summary</code></td><td>Request counts, success rate, average latency</td><td>Quick operational check</td></tr>
+                </tbody>
+            </table>
+
+            <h2>Quick Test Commands</h2>
+            <div class="code-label">Terminal — verify the live agent</div>
+            <div class="code-block">
+<span class="comment"># Liveness check</span>
+curl http://&lt;your-endpoint&gt;/health
+
+<span class="comment"># Full agent response</span>
+curl -s http://&lt;your-endpoint&gt;/agent/respond \
+  -H "Content-Type: application/json" \
+  -d '{"user_query": "A learner wants to defer to the next cohort. Draft a reply."}'
+
+<span class="comment"># Streaming (SSE)</span>
+curl -N http://&lt;your-endpoint&gt;/agent/stream \
+  -H "Content-Type: application/json" \
+  -d '{"user_query": "Classify this message: I cannot access my recordings."}'</div>
+
+            <h2>Common Production Issues</h2>
+            <table>
+                <thead><tr><th>Symptom</th><th>Likely Cause</th><th>Fix</th></tr></thead>
+                <tbody>
+                    <tr><td>App fails to start — missing key</td><td>OPENAI_API_KEY not set</td><td>Check .env locally; check Secret in AWS Console</td></tr>
+                    <tr><td>/ready returns 503</td><td>Secrets not loadable — IAM permission or network issue</td><td>Check pod IAM role; check VPC endpoint for Secrets Manager</td></tr>
+                    <tr><td>OpenAI timeouts in production</td><td>REQUEST_TIMEOUT_SECONDS too low</td><td>Increase in ConfigMap and redeploy</td></tr>
+                    <tr><td>kubectl apply — image pull error</td><td>ECR auth expired or wrong image URI</td><td>Check image tag; re-run ecr-login</td></tr>
+                    <tr><td>No logs in CloudWatch</td><td>ENABLE_CLOUDWATCH_LOGGING=false or IAM missing</td><td>Enable flag in ConfigMap; add PutLogEvents IAM policy</td></tr>
+                </tbody>
+            </table>
+
+            <h2>What's Coming — Session 2 (Sunday)</h2>
+            <div class="step-grid">
+                <div class="step-card">
+                    <div class="step-num">🔌</div>
+                    <h4>FastAPI + LangServe</h4>
+                    <p style="font-size:13px;">Building proper production API endpoints on top of what you deployed today</p>
+                </div>
+                <div class="step-card">
+                    <div class="step-num">📡</div>
+                    <h4>SSE Deep Dive</h4>
+                    <p style="font-size:13px;">Going deep on /agent/stream — real-time feedback in production UIs</p>
+                </div>
+                <div class="step-card">
+                    <div class="step-num">🔄</div>
+                    <h4>WebSockets</h4>
+                    <p style="font-size:13px;">Bi-directional agent communication for interactive use cases</p>
+                </div>
+                <div class="step-card">
+                    <div class="step-num">💰</div>
+                    <h4>Cost Optimisation</h4>
+                    <p style="font-size:13px;">LLM response caching and horizontal scaling strategies at scale</p>
+                </div>
+            </div>
+
+            <div class="key-insight">
+                <div class="insight-label">🔑 Session Closing Insight</div>
+                <div class="insight-text">"Today you built a mental model for every layer of deployment: container → registry → cloud → orchestrator → secrets → pipeline. That mental model is what separates engineers who ship from engineers who demo."</div>
+            </div>
+        </div>
+
+        <!-- ===== CHECKLIST ===== -->
+        <div id="checklist" class="section">
+            <h1>Deployment Checklist &amp; Quick Reference</h1>
+            <p style="font-size:16px;color:#1565c0;font-weight:600;">Use this before every production deploy</p>
+
+            <h2>✅ Pre-Deploy Checklist</h2>
+            <ul class="checklist">
+                <li><span class="check-yes">✓</span> Dockerfile uses non-root user (UID 10001) and slim base image</li>
+                <li><span class="check-yes">✓</span> requirements.txt copied before application code (layer caching)</li>
+                <li><span class="check-yes">✓</span> PYTHONUNBUFFERED=1 set for immediate log streaming</li>
+                <li><span class="check-yes">✓</span> OPENAI_API_KEY in AWS Secrets Manager — NOT in code, YAML, or ConfigMap</li>
+                <li><span class="check-yes">✓</span> ConfigMap holds only non-sensitive environment variables</li>
+                <li><span class="check-yes">✓</span> Docker image tagged with git SHA, not "latest"</li>
+                <li><span class="check-yes">✓</span> Kubernetes deployment has both liveness and readiness probes</li>
+                <li><span class="check-yes">✓</span> Resource requests AND limits set on every container</li>
+                <li><span class="check-yes">✓</span> RollingUpdate strategy with maxUnavailable: 0 for zero-downtime</li>
+                <li><span class="check-yes">✓</span> GitHub Actions pipeline: tests must pass before deploy runs</li>
+                <li><span class="check-yes">✓</span> kubectl rollout status confirms successful rollout</li>
+                <li><span class="check-yes">✓</span> POST /ready returns 200 after deploy</li>
+            </ul>
+
+            <h2>🔧 Useful Commands</h2>
+            <table>
+                <thead><tr><th>Command</th><th>What It Does</th></tr></thead>
+                <tbody>
+                    <tr><td><code>docker build -t agent:local .</code></td><td>Build image locally</td></tr>
+                    <tr><td><code>docker run --rm -p 8000:8000 -e KEY=val agent:local</code></td><td>Run container with env vars</td></tr>
+                    <tr><td><code>aws ecr get-login-password | docker login ...</code></td><td>Authenticate to ECR</td></tr>
+                    <tr><td><code>docker push &lt;ecr-uri&gt;/&lt;repo&gt;:&lt;sha&gt;</code></td><td>Push image to ECR</td></tr>
+                    <tr><td><code>kubectl apply -f deployment/k8s/</code></td><td>Apply all K8s manifests</td></tr>
+                    <tr><td><code>kubectl rollout status deployment/support-ops-agent -n ...</code></td><td>Watch rollout progress</td></tr>
+                    <tr><td><code>kubectl logs -l app.kubernetes.io/name=support-ops-agent</code></td><td>Stream pod logs</td></tr>
+                    <tr><td><code>kubectl get pods -n support-ops-agent</code></td><td>List running pods</td></tr>
+                    <tr><td><code>kubectl describe pod &lt;pod-name&gt; -n support-ops-agent</code></td><td>Debug pod startup issues</td></tr>
+                </tbody>
+            </table>
+
+            <h2>📁 Key Files Map</h2>
+            <table>
+                <thead><tr><th>Block</th><th>File</th><th>Key Lesson</th></tr></thead>
+                <tbody>
+                    <tr><td>Block 2</td><td><code>Dockerfile</code></td><td>Non-root, slim, layer caching, PYTHONUNBUFFERED</td></tr>
+                    <tr><td>Block 4</td><td><code>app/core/config.py</code></td><td>Auto secrets_source switching</td></tr>
+                    <tr><td>Block 4</td><td><code>app/core/secrets.py</code></td><td>Strategy pattern — env vs AWS Secrets Manager</td></tr>
+                    <tr><td>Block 5</td><td><code>.github/workflows/deploy.yml</code></td><td>test gate → build → push → kubectl apply</td></tr>
+                    <tr><td>Block 6</td><td><code>deployment/k8s/deployment.yaml</code></td><td>Probes, resources, rolling update</td></tr>
+                    <tr><td>Block 6</td><td><code>deployment/k8s/configmap.yaml</code></td><td>Non-sensitive config only</td></tr>
+                    <tr><td>Block 7</td><td><code>app/api/routes.py</code></td><td>/health /ready /agent/respond /agent/stream</td></tr>
+                </tbody>
+            </table>
+
+            <div class="assignment-card">
+                <div class="assignment-title">🏠 After-Session Challenge</div>
+                <div class="assignment-item"><div class="assignment-num">1</div><div>Add a new environment variable to <code>configmap.yaml</code> and redeploy — observe the rolling update in kubectl</div></div>
+                <div class="assignment-item"><div class="assignment-num">2</div><div>Break a test intentionally and push — confirm the CI pipeline blocks the deploy</div></div>
+                <div class="assignment-item"><div class="assignment-num">3</div><div>Call <code>POST /agent/stream</code> and inspect the SSE events — map each event to a LangGraph node</div></div>
+                <div class="assignment-item"><div class="assignment-num">4</div><div>Trace the full secrets path: <code>config.py</code> → <code>secrets.py</code> → AWS Secrets Manager → <code>get_openai_api_key()</code></div></div>
+                <div class="assignment-item"><div class="assignment-num">5</div><div><em>Stretch:</em> Switch <code>SECRETS_SOURCE</code> from <code>env</code> to <code>aws_secrets_manager</code> locally using a real secret you create in AWS Console</div></div>
+            </div>
+        </div>
+
+    </div><!-- end main-content -->
+</div><!-- end container -->
+
+<script>
+    function showSection(id, el) {
+        document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+        el.classList.add('active');
+        document.querySelector('.main-content').scrollTop = 0;
+    }
+</script>
+</body>
+</html>
