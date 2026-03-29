@@ -324,6 +324,7 @@ If deploy fails:
 - **ImagePullBackOff**: check ECR URI, region, and that the image was pushed.
 - **CrashLoop / `/ready` 503**: Secrets Manager name, IRSA annotation, or secret JSON missing `OPENAI_API_KEY`.
 - **No CloudWatch direct logs**: IAM on the pod role, `ENABLE_CLOUDWATCH_LOGGING`, and region.
+- **`GET /demo/golden-dataset` returns 500 / logs show `FileNotFoundError` for `golden_dataset.json`**: the image must include `data/golden_dataset.json` (see `Dockerfile`). Rebuild and push a new image so CI picks up the `COPY data ./data` layer, then redeploy.
 
 ---
 

@@ -22,6 +22,7 @@ from app.api.schemas import (
 )
 from app.core.config import get_settings
 from app.core.exceptions import AgentInvocationError
+from app.core.log_safety import truncate_for_log
 from app.core.langsmith_tracing import graph_run_config
 from app.core.metrics import REGISTRY, monotonic_ms
 from app.core.prometheus_metrics import AGENT_INVOCATIONS
@@ -103,6 +104,19 @@ async def agent_respond(request: Request, body: AgentRespondRequest) -> AgentRes
         environment=settings.environment,
         endpoint="/agent/respond",
     )
+    cap = settings.agent_io_log_max_chars
+    uq_preview = truncate_for_log(body.user_query, cap)
+    logger.info(
+        "Agent user input",
+        extra={
+            "log_event": "agent_user_input",
+            "safe_metadata": {
+                "request_id": rid,
+                "endpoint": "/agent/respond",
+                "user_query_preview": uq_preview,
+            },
+        },
+    )
     try:
         final = await asyncio.wait_for(
             graph.ainvoke(initial, config=run_cfg),
@@ -116,7 +130,11 @@ async def agent_respond(request: Request, body: AgentRespondRequest) -> AgentRes
                 "error_code": "AGENT_TIMEOUT",
                 "error_type": "TimeoutError",
                 "log_event": "agent_timeout",
-                "safe_metadata": {"endpoint": "/agent/respond", "request_id": rid},
+                "safe_metadata": {
+                    "endpoint": "/agent/respond",
+                    "request_id": rid,
+                    "user_query_preview": uq_preview,
+                },
             },
         )
         raise HTTPException(status_code=504, detail="Agent execution timed out") from exc
@@ -128,12 +146,34 @@ async def agent_respond(request: Request, body: AgentRespondRequest) -> AgentRes
                 "error_code": "AGENT_INVOCATION_FAILED",
                 "error_type": type(exc).__name__,
                 "log_event": "agent_invocation_error",
-                "safe_metadata": {"endpoint": "/agent/respond", "request_id": rid},
+                "safe_metadata": {
+                    "endpoint": "/agent/respond",
+                    "request_id": rid,
+                    "user_query_preview": uq_preview,
+                },
             },
         )
         raise AgentInvocationError("Agent execution failed") from exc
 
     latency = monotonic_ms() - t0
+
+    logger.info(
+        "Agent structured output",
+        extra={
+            "log_event": "agent_output",
+            "safe_metadata": {
+                "request_id": rid,
+                "endpoint": "/agent/respond",
+                "classification": str(final.get("classification", "")),
+                "draft_reply_preview": truncate_for_log(str(final.get("draft_reply", "")), cap),
+                "internal_summary_preview": truncate_for_log(str(final.get("internal_summary", "")), cap),
+                "recommended_action_preview": truncate_for_log(str(final.get("recommended_action", "")), cap),
+                "policy_context_preview": truncate_for_log(str(final.get("policy_context", "")), cap),
+                "used_tools": list(final.get("used_tools") or []),
+                "processing_time_ms": round(latency, 3),
+            },
+        },
+    )
 
     return AgentRespondResponse(
         request_id=rid,
@@ -180,6 +220,18 @@ async def agent_stream(request: Request, body: AgentRespondRequest) -> Streaming
         request_id=rid,
         environment=settings.environment,
         endpoint="/agent/stream",
+    )
+    cap = settings.agent_io_log_max_chars
+    logger.info(
+        "Agent user input (stream)",
+        extra={
+            "log_event": "agent_user_input",
+            "safe_metadata": {
+                "request_id": rid,
+                "endpoint": "/agent/stream",
+                "user_query_preview": truncate_for_log(body.user_query, cap),
+            },
+        },
     )
 
     async def gen() -> AsyncIterator[bytes]:

@@ -28,7 +28,7 @@ def build_enrich_node(llm: ChatOpenAI):
                 )
             )
             human = HumanMessage(content=q)
-            resp = await ainvoke_with_retry(llm, [sys, human])
+            resp = await ainvoke_with_retry(llm, [sys, human], request_id=rid or None)
             text = getattr(resp, "content", str(resp))
             return {"enriched_context": str(text)}
 

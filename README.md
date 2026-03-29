@@ -126,6 +126,7 @@ Key settings (see `app/core/config.py`):
 | `CLOUDWATCH_LOG_GROUP` / `CLOUDWATCH_LOG_STREAM_PREFIX` | Direct CloudWatch logging |
 | `ENABLE_CLOUDWATCH_LOGGING` | Toggle watchtower handler |
 | `ENABLE_LANGCHAIN_TRACE_LOGS` | LangChain span-style JSON logs (more volume; good for CloudWatch Logs Insights demos) |
+| `AGENT_IO_LOG_MAX_CHARS` | Max length for logged user query / LLM / draft text per field (`0` disables; default `4000`) |
 | `REDIS_URL` | Optional future cache |
 | `REQUEST_TIMEOUT_SECONDS` | Agent / upstream timeout |
 | `SECRETS_SOURCE` | `env`, `aws_secrets_manager`, or `auto` |
@@ -239,10 +240,11 @@ Workflow: `.github/workflows/deploy.yml`
 | OpenAI timeouts | Increase `REQUEST_TIMEOUT_SECONDS`; check model availability |
 | No CloudWatch direct logs | `ENABLE_CLOUDWATCH_LOGGING` false, IAM, or watchtower init failed (check stdout warning) |
 | kubectl apply errors | Namespace ordering; CRB/RBAC; image pull from ECR |
+| `/demo/golden-dataset` 500 / `FileNotFoundError` for `golden_dataset.json` | Rebuild and redeploy the image so `data/` is included (see `Dockerfile`); older images only copied `app/`. |
 
 ## Production notes and tradeoffs
 
-- **Structured JSON logs** include `request_id`, `route`, `environment`, optional `node_name`, `duration_ms`, and safe metadata — never secrets.
+- **Structured JSON logs** include `request_id`, `route`, `environment`, optional `node_name`, `duration_ms`, and safe metadata — never secrets. For troubleshooting, **`log_event`** values such as `agent_user_input`, `llm_response`, and `agent_output` include **truncated** user text and model output (see `AGENT_IO_LOG_MAX_CHARS`); treat logs as potentially sensitive.
 - **Metrics:** `GET /metrics` exposes Prometheus counters/histograms; `GET /metrics-summary` returns JSON. **Logs** go to **CloudWatch** (or stdout) — not to Prometheus. See `docs/CLASS_DEMO_GOLDEN_OBSERVABILITY.md` for a class walkthrough (golden dataset, errors, CloudWatch Insights, Prometheus).
 - **Graph** uses async nodes and `tenacity` around LLM calls for transient API failures.
 - **State** is TypedDict-based; extend with reducers if you add conversational memory.

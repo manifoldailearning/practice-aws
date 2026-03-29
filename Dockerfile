@@ -15,6 +15,8 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY app ./app
+# Golden dataset for GET /demo/golden-dataset (path resolves to WORKDIR/data/... at runtime)
+COPY data ./data
 
 USER 10001
 

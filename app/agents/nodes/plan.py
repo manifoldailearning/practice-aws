@@ -40,7 +40,7 @@ def build_plan_node(llm: ChatOpenAI):
                     f"Policy excerpts:\n{policy[:6000]}"
                 )
             )
-            resp = await ainvoke_with_retry(llm, [sys, human])
+            resp = await ainvoke_with_retry(llm, [sys, human], request_id=rid or None)
             text = str(getattr(resp, "content", resp))
             recommended = ""
             for line in text.splitlines():

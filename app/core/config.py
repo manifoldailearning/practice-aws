@@ -45,6 +45,12 @@ class Settings(BaseSettings):
     redis_url: str | None = Field(default=None, description="Optional Redis URL for future cache")
     request_timeout_seconds: float = Field(default=120.0, description="Upstream request timeout")
 
+    agent_io_log_max_chars: int = Field(
+        default=4000,
+        ge=0,
+        description="Max characters per logged field (user query, LLM text, draft reply) for troubleshooting",
+    )
+
     secrets_source: Literal["auto", "env", "aws_secrets_manager"] = Field(
         default="auto",
         description="Where to load OPENAI_API_KEY from",

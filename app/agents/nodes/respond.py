@@ -56,7 +56,7 @@ def build_respond_node(llm: ChatOpenAI):
                     f"Original learner/operator query:\n{state.get('user_query', '')}"
                 )
             )
-            resp = await ainvoke_with_retry(llm, [sys, human])
+            resp = await ainvoke_with_retry(llm, [sys, human], request_id=rid or None)
             draft_reply = str(getattr(resp, "content", resp))
 
             sum_sys = SystemMessage(
@@ -72,7 +72,7 @@ def build_respond_node(llm: ChatOpenAI):
                     f"Draft reply:\n{draft_reply[:3000]}"
                 )
             )
-            sum_resp = await ainvoke_with_retry(llm, [sum_sys, sum_h])
+            sum_resp = await ainvoke_with_retry(llm, [sum_sys, sum_h], request_id=rid or None)
             internal_summary = str(getattr(sum_resp, "content", sum_resp))
 
             return {

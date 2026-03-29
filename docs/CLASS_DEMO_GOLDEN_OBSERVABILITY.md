@@ -72,6 +72,40 @@ You should see one **passed** line per case id (for example `deferment-001`, `ac
 
 The app logs **JSON** with fields such as `request_id`, `route`, `environment`, and (on errors) `error_code`, `error_type`, `log_event`, plus optional `metadata` / `safe_metadata`.
 
+### User input and model output (troubleshooting)
+
+For **`POST /agent/respond`**, logs include:
+
+| `log_event` | What appears in `metadata` / `safe_metadata` |
+|-------------|-----------------------------------------------|
+| `agent_user_input` | `user_query_preview` (truncated), `request_id`, `endpoint` |
+| `llm_response` | `response_preview` for **each** chat completion (enrich, plan, respond, etc.), `request_id`, `model` |
+| `agent_output` | `classification`, `draft_reply_preview`, `internal_summary_preview`, `recommended_action_preview`, `policy_context_preview`, `used_tools`, `processing_time_ms` |
+
+For **`POST /agent/stream`**, the handler logs **`agent_user_input`** before streaming; **`llm_response`** lines still include `request_id` from graph state.
+
+Truncation is controlled by **`AGENT_IO_LOG_MAX_CHARS`** (default `4000`; set `0` to disable user/LLM text in logs). These fields may contain **learner or operator content** — restrict log access in production.
+
+**CloudWatch Logs Insights — user + model on one request:**
+
+If field names work in your log group:
+
+```sql
+fields @timestamp, @message, log_event, metadata.request_id as rid
+| filter log_event in ["agent_user_input", "llm_response", "agent_output"]
+| filter metadata.request_id = "YOUR_REQUEST_ID"
+| sort @timestamp asc
+```
+
+If not, search the raw JSON line (beginner-friendly):
+
+```sql
+fields @timestamp, @message
+| filter @message like /YOUR_REQUEST_ID/
+| filter @message like /agent_user_input|llm_response|agent_output/
+| sort @timestamp asc
+```
+
 **Examples of `error_code` values:**
 
 | Situation | `error_code` / `log_event` | HTTP |
@@ -117,34 +151,79 @@ curl -s http://localhost:8000/agent/respond \
 
 Copy `request_id` from the JSON response (or use `X-Request-ID`).
 
-### 4.3 CloudWatch Logs Insights queries
+### 4.3 Hands-on: CloudWatch Logs Insights (if you are new to CloudWatch)
 
-**Filter by request:**
+**What this is:** **Logs Insights** is a query editor on top of log storage. You pick **which log group** to read, a **time window**, run a small **query language** (pipe syntax), and see a table of matching lines.
+
+**Before you start**
+
+1. You have **already sent at least one request** (§4.2) so new log events exist.
+2. You know your **AWS Region** (same as the EKS cluster), e.g. `us-east-1`.
+3. You know your **log group name**, e.g. `/support-ops/agent` (from `CLOUDWATCH_LOG_GROUP` in `deployment/k8s/configmap.yaml`), **or** the cluster log group if you only use Fluent Bit / Container Insights (name will differ).
+
+**Open Logs Insights (console)**
+
+1. Sign in to the [AWS Management Console](https://console.aws.amazon.com/).
+2. **Region:** top-right menu — select the **same region** as your cluster (e.g. `N. Virginia` = `us-east-1`).
+3. Search for **CloudWatch** (or open **Services** → **CloudWatch**).
+4. Left sidebar → **Logs** → **Logs Insights** (under **Logs**).
+5. **Select log group(s):** use the dropdown **“Log groups”** and check the group where your app’s stdout / watchtower logs go (often `/support-ops/agent` if you use direct logging).
+6. **Time range:** above the query box, choose **Relative** → e.g. **15m** or **1h**, or **Custom** if you ran the curl earlier today.
+7. **Run a query:** paste one of the queries below into the editor, click **Run query**.
+
+**First query (recommended for beginners — works when each log line is JSON inside `@message`)**
+
+EKS and Fluent Bit usually store the **whole JSON line** in the field **`@message`**. Searching that string is reliable:
 
 ```sql
-fields @timestamp, message, request_id, error_code, log_event
+fields @timestamp, @message
+| filter @message like /class-demo-001/
+| sort @timestamp desc
+| limit 50
+```
+
+Replace `class-demo-001` with the **`request_id`** you care about (from the API response or `X-Request-ID`).
+
+**Read the results**
+
+- Each row is one log event. Open **`@message`**: you should see your app’s JSON (`request_id`, `log_event`, `metadata`, etc.).
+- **No rows?** Widen the time range, confirm **region** and **log group**, confirm `ENABLE_CLOUDWATCH_LOGGING` / cluster logging is actually shipping logs to that group, then generate traffic again (§4.2).
+
+**Query using JSON field names (when they resolve)**
+
+If Insights already parses your JSON (or you use `parse` — varies by ingestion), you can filter on fields:
+
+```sql
+fields @timestamp, @message, request_id, error_code, log_event
 | filter request_id = "class-demo-001"
 | sort @timestamp desc
 | limit 50
 ```
 
+If this returns **no rows** but the `@message` **like** query above works, keep using **`filter @message like /.../`** for your class demo.
+
 **LangChain trace lines only (when `ENABLE_LANGCHAIN_TRACE_LOGS=true`):**
 
 ```sql
-fields @timestamp, message, metadata.trace_event as trace_event, metadata.run_id as run_id
-| filter message like /langchain_trace/
+fields @timestamp, @message
+| filter @message like /langchain_trace/
 | sort @timestamp desc
 | limit 100
 ```
 
-**Errors only:**
+**Errors only (search in raw message):**
 
 ```sql
-fields @timestamp, message, error_code, level, exception
-| filter level = "ERROR" or ispresent(error_code)
+fields @timestamp, @message
+| filter @message like /"level":"ERROR"/ or @message like /"error_code"/
 | sort @timestamp desc
 | limit 50
 ```
+
+**Save / reuse**
+
+- Use **Save** in the query editor to keep a named query for the next class.
+- **Actions** → **Export results** if you want CSV for slides (optional).
 
 ---
 
